@@ -40,7 +40,7 @@ if "analysis_data" not in st.session_state:
     st.session_state.analysis_data = None
 
 # ─────────────────────────────────────────────
-#  GLOBAL CSS
+#  GLOBAL CSS  (Fix 1 + Fix 3 included here)
 # ─────────────────────────────────────────────
 st.markdown("""
 <style>
@@ -52,13 +52,88 @@ st.markdown("""
 
   /* ── Hide default Streamlit chrome ── */
   #MainMenu, footer, header { visibility: hidden; }
-  .block-container { padding: 0 !important; max-width: 100% !important; }
+
+  /* FIX 3 ── Collapse all dead space at the top */
+  .block-container {
+    padding: 0 !important;
+    margin-top: 0 !important;
+    max-width: 100% !important;
+  }
+  [data-testid="stAppViewContainer"] > section > div:first-child {
+    padding-top: 0 !important;
+    margin-top: 0 !important;
+  }
+  [data-testid="stVerticalBlock"] {
+    gap: 0 !important;
+  }
+  .main .block-container {
+    padding-top: 0 !important;
+    padding-left: 0 !important;
+    padding-right: 0 !important;
+    padding-bottom: 0 !important;
+    max-width: 100% !important;
+  }
+  div[data-testid="stVerticalBlock"] > div { gap: 0 !important; }
 
   /* ── App shell ── */
   .stApp {
     background: #0D1B2A;
     color: #E2E8F0;
   }
+
+  /* FIX 1 ── Global text visibility on dark theme */
+  .stApp, .main-content,
+  [data-testid="stAppViewContainer"],
+  [data-testid="stVerticalBlock"] {
+    color: #E2E8F0 !important;
+  }
+
+  /* All paragraph / label text in main area */
+  .stApp p, .stApp label,
+  .stApp span:not(.sym-badge):not(.score-pill):not(.metric-badge):not(.metric-label):not(.metric-value),
+  [data-testid="stMarkdownContainer"] p {
+    color: #CBD5E1 !important;
+  }
+
+  /* Text inputs and textareas */
+  .stTextInput input,
+  .stTextArea textarea,
+  .stNumberInput input {
+    background: rgba(17, 40, 64, 0.9) !important;
+    color: #F1F5F9 !important;
+    border: 1px solid rgba(255,255,255,0.15) !important;
+    border-radius: 8px !important;
+  }
+
+  /* Selectbox */
+  .stSelectbox div[data-baseweb="select"] > div {
+    background: rgba(17, 40, 64, 0.9) !important;
+    color: #F1F5F9 !important;
+    border: 1px solid rgba(255,255,255,0.15) !important;
+    border-radius: 8px !important;
+  }
+  [data-baseweb="popover"] li {
+    color: #E2E8F0 !important;
+    background: #112840 !important;
+  }
+  [data-baseweb="popover"] li:hover {
+    background: #1E3A5F !important;
+  }
+
+  /* st.metric */
+  [data-testid="stMetricLabel"] p,
+  [data-testid="stMetricLabel"] { color: #94A3B8 !important; }
+  [data-testid="stMetricValue"]  { color: #F1F5F9 !important; }
+  [data-testid="stMetricDelta"]  { color: #34D399 !important; }
+
+  /* Captions */
+  .stCaption, [data-testid="stCaptionContainer"] p { color: #64748B !important; }
+
+  /* DataFrame */
+  .stDataFrame td, .stDataFrame th { color: #CBD5E1 !important; }
+
+  /* Alert / info */
+  [data-testid="stAlert"] p { color: #E2E8F0 !important; }
 
   /* ── Sidebar ── */
   [data-testid="stSidebar"] {
@@ -121,6 +196,7 @@ st.markdown("""
     position: sticky;
     top: 0;
     z-index: 999;
+    margin-bottom: 0 !important;
   }
   .header-title {
     font-size: 16px;
@@ -158,9 +234,19 @@ st.markdown("""
 
   /* ── Main content area ── */
   .main-content {
-    padding: 28px 36px 40px;
+    padding: 12px 36px 40px;
     background: #0D1B2A;
     min-height: calc(100vh - 60px);
+  }
+
+  /* FIX 2 ── Collapse the invisible nav button row to zero height */
+  div[data-testid="stHorizontalBlock"]:has(button[kind="secondary"]) {
+    height: 0 !important;
+    overflow: hidden !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    min-height: 0 !important;
+    max-height: 0 !important;
   }
 
   /* ── Metric cards ── */
@@ -329,31 +415,6 @@ st.markdown("""
     margin-top: 2px;
   }
 
-  /* ── Algo button group ── */
-  .algo-group {
-    display: flex;
-    gap: 0;
-    border: 1px solid rgba(255,255,255,0.12);
-    border-radius: 8px;
-    overflow: hidden;
-    margin-top: 4px;
-  }
-  .algo-btn {
-    flex: 1;
-    text-align: center;
-    padding: 8px 4px;
-    font-size: 12px;
-    font-weight: 600;
-    cursor: pointer;
-    color: #64748B !important;
-    background: transparent;
-    border: none;
-  }
-  .algo-btn.active-algo {
-    background: #1E3A5F !important;
-    color: #38BDF8 !important;
-  }
-
   /* ── Footer ── */
   .app-footer {
     text-align: center;
@@ -363,16 +424,6 @@ st.markdown("""
     border-top: 1px solid rgba(255,255,255,0.05);
     margin-top: 40px;
   }
-
-  /* Streamlit internal overrides for main area */
-  .main .block-container {
-    padding-top: 0 !important;
-    padding-left: 0 !important;
-    padding-right: 0 !important;
-    padding-bottom: 0 !important;
-    max-width: 100% !important;
-  }
-  div[data-testid="stVerticalBlock"] > div { gap: 0 !important; }
 
   /* Dataframe styling */
   .stDataFrame { background: transparent !important; }
@@ -415,7 +466,6 @@ ALL_SECTORS = sorted(df["Sector"].unique().tolist())
 #  SIDEBAR
 # ─────────────────────────────────────────────
 with st.sidebar:
-    # Brand mark
     st.markdown("""
     <div style="display:flex;align-items:center;gap:10px;margin-bottom:20px;padding:4px 0;">
       <div style="width:34px;height:34px;background:linear-gradient(135deg,#1E88E5,#38BDF8);
@@ -428,7 +478,6 @@ with st.sidebar:
     </div>
     """, unsafe_allow_html=True)
 
-    # User name
     user_name = st.text_input("Your Name", value="", placeholder="Enter your name…",
                                label_visibility="collapsed")
 
@@ -449,7 +498,6 @@ with st.sidebar:
 
     st.markdown("<div style='height:4px'></div>", unsafe_allow_html=True)
 
-    # ── INVESTOR SETTINGS ──
     st.markdown("### ⚙️ Investor Settings")
 
     amount = st.number_input(
@@ -458,7 +506,6 @@ with st.sidebar:
         value=5_000_000, step=100_000,
         help="Total capital to invest"
     )
-    # Show formatted amount
     st.markdown(f"<div style='font-size:13px;color:#38BDF8;font-weight:700;margin:-10px 0 10px 0;font-family:JetBrains Mono,monospace;'>Rs {amount:,}</div>", unsafe_allow_html=True)
 
     duration = st.slider("Duration (Years)", 1, 15, 5)
@@ -468,7 +515,6 @@ with st.sidebar:
 
     st.markdown("<div style='height:4px'></div>", unsafe_allow_html=True)
 
-    # ── SECTOR PREFERENCES ──
     st.markdown("### 🏭 Preferred Sectors")
     preferred = st.multiselect(
         "Select sectors", options=ALL_SECTORS,
@@ -483,14 +529,12 @@ with st.sidebar:
 
     st.markdown("<div style='height:4px'></div>", unsafe_allow_html=True)
 
-    # ── PORTFOLIO SIZE ──
     st.markdown("### 📦 Portfolio Size")
     n_stocks = st.slider("Stocks", 3, 12, 5, label_visibility="collapsed",
                           format="%d stocks")
 
     st.markdown("<div style='height:4px'></div>", unsafe_allow_html=True)
 
-    # ── ALGORITHM ──
     st.markdown("### 🧠 Algorithm")
     algo = st.radio(
         "Algorithm",
@@ -499,7 +543,6 @@ with st.sidebar:
         horizontal=True,
         label_visibility="collapsed"
     )
-    # Map short label back
     if algo == "Sim. Annealing":
         algo = "Simulated Annealing"
 
@@ -508,7 +551,7 @@ with st.sidebar:
     run_btn = st.button("▶  Run Analysis", use_container_width=True, type="primary")
 
 # ─────────────────────────────────────────────
-#  TOP NAV BAR
+#  TOP NAV BAR  (Fix 2 — single navigation only)
 # ─────────────────────────────────────────────
 TABS = [
     ("Portfolio",    "📊"),
@@ -517,7 +560,6 @@ TABS = [
     ("All Stocks",   "📋"),
 ]
 
-# Build nav HTML
 nav_html = '<div class="top-header">'
 nav_html += '<div class="header-title">PSX <span>AI Investment Advisory System</span> — Streamlit Dashboard</div>'
 nav_html += '<div class="nav-tabs">'
@@ -525,39 +567,17 @@ for tab_name, icon in TABS:
     active_class = "active" if st.session_state.active_tab == tab_name else ""
     nav_html += f'<button class="nav-tab {active_class}" onclick="void(0)">{icon} {tab_name}</button>'
 nav_html += '</div></div>'
-
 st.markdown(nav_html, unsafe_allow_html=True)
 
-# Actual tab switcher using columns + buttons (these drive state)
-nav_cols = st.columns(len(TABS))
+# Invisible zero-height functional buttons that drive session state.
+# The CSS rule  div[data-testid="stHorizontalBlock"]:has(button[kind="secondary"])
+# collapses this entire row to 0px — only the HTML header above is visible.
+_nav_cols = st.columns(len(TABS))
 for i, (tab_name, icon) in enumerate(TABS):
-    with nav_cols[i]:
-        if st.button(
-            f"{icon} {tab_name}",
-            key=f"nav_{tab_name}",
-            use_container_width=True,
-            type="secondary"
-        ):
+    with _nav_cols[i]:
+        if st.button(f"{icon} {tab_name}", key=f"nav_{tab_name}", use_container_width=True):
             st.session_state.active_tab = tab_name
             st.rerun()
-
-# Style the functional nav buttons to be invisible (header HTML handles visuals)
-st.markdown("""
-<style>
-  div[data-testid="stHorizontalBlock"] > div:first-child > div > div > button,
-  div[data-testid="stHorizontalBlock"] > div > div > div > button {
-    background: transparent !important;
-    border: none !important;
-    color: transparent !important;
-    height: 1px !important;
-    padding: 0 !important;
-    margin: 0 !important;
-    font-size: 0 !important;
-    overflow: hidden !important;
-    min-height: 0 !important;
-  }
-</style>
-""", unsafe_allow_html=True)
 
 active = st.session_state.active_tab
 
@@ -644,20 +664,27 @@ if run_btn:
 
     if algo == "Hill Climbing":
         display_alloc, display_weights, display_metrics = hc_alloc, hc_weights, hc_metrics
-        hc_alloc_stored = hc_alloc; hc_history_stored = hc_history; hc_iters_stored = hc_iters; hc_metrics_stored = hc_metrics
-        sa_alloc_stored = sa_alloc_stored = None; sa_history_stored = None; sa_iters_stored = None; sa_metrics_stored = None
+        hc_alloc_stored   = hc_alloc;   hc_history_stored = hc_history
+        hc_iters_stored   = hc_iters;   hc_metrics_stored = hc_metrics
+        sa_alloc_stored   = None;       sa_history_stored = None
+        sa_iters_stored   = None;       sa_metrics_stored = None
     elif algo == "Simulated Annealing":
         display_alloc, display_weights, display_metrics = sa_alloc, sa_weights, sa_metrics
-        hc_alloc_stored = None; hc_history_stored = None; hc_iters_stored = None; hc_metrics_stored = None
-        sa_alloc_stored = sa_alloc; sa_history_stored = sa_history; sa_iters_stored = sa_iters; sa_metrics_stored = sa_metrics
-    else:
+        hc_alloc_stored   = None;       hc_history_stored = None
+        hc_iters_stored   = None;       hc_metrics_stored = None
+        sa_alloc_stored   = sa_alloc;   sa_history_stored = sa_history
+        sa_iters_stored   = sa_iters;   sa_metrics_stored = sa_metrics
+    else:  # Both
         display_alloc, display_weights, display_metrics = sa_alloc, sa_weights, sa_metrics
-        hc_alloc_stored = hc_alloc; hc_history_stored = hc_history; hc_iters_stored = hc_iters; hc_metrics_stored = hc_metrics
-        sa_alloc_stored = sa_alloc; sa_history_stored = sa_history; sa_iters_stored = sa_iters; sa_metrics_stored = sa_metrics
+        hc_alloc_stored   = hc_alloc;   hc_history_stored = hc_history
+        hc_iters_stored   = hc_iters;   hc_metrics_stored = hc_metrics
+        sa_alloc_stored   = sa_alloc;   sa_history_stored = sa_history
+        sa_iters_stored   = sa_iters;   sa_metrics_stored = sa_metrics
 
     st.session_state.analysis_data = {
         "scored_df": scored_df, "top_stocks": top_stocks,
-        "display_alloc": display_alloc, "display_weights": display_weights, "display_metrics": display_metrics,
+        "display_alloc": display_alloc, "display_weights": display_weights,
+        "display_metrics": display_metrics,
         "algo": algo, "preferred": preferred,
         "hc_alloc": hc_alloc_stored, "hc_history": hc_history_stored,
         "hc_iters": hc_iters_stored, "hc_metrics": hc_metrics_stored,
@@ -691,13 +718,11 @@ target_return    = D["target_return"]
 # ══════════════════════════════════════════════
 if active == "Portfolio":
 
-    # ── Metrics row ──
     exp_ret  = display_metrics.get("Expected Return (%)", 0)
     port_risk= display_metrics.get("Portfolio Risk", 0)
     div_yld  = display_metrics.get("Avg Dividend Yield", 0)
     sharpe   = display_metrics.get("Sharpe-like Ratio", 0)
     above    = "▲ Above target" if exp_ret >= target_return else "▼ Below target"
-    above_cls= "up" if exp_ret >= target_return else "amber-text"
 
     m1, m2, m3, m4 = st.columns(4)
     with m1:
@@ -750,9 +775,8 @@ if active == "Portfolio":
             textfont=dict(size=12, color="#E2E8F0"),
             hovertemplate="<b>%{label}</b><br>Allocation: %{value}%<extra></extra>",
         ))
-        n_items = len(pie_df)
         fig_donut.add_annotation(
-            text=f"<b>{n_items} Stocks</b><br><span style='font-size:11px;color:#64748B'>Diversified</span>",
+            text=f"<b>{len(pie_df)} Stocks</b><br><span style='font-size:11px;color:#64748B'>Diversified</span>",
             x=0.5, y=0.5, showarrow=False, align="center",
             font=dict(size=14, color="#F1F5F9"),
         )
@@ -797,7 +821,6 @@ if active == "Portfolio":
         </table>""", unsafe_allow_html=True)
         st.markdown('</div>', unsafe_allow_html=True)
 
-    # ── Sector bar ──
     st.markdown('<div class="section-heading">Allocation by Sector</div>', unsafe_allow_html=True)
     st.markdown('<div class="panel">', unsafe_allow_html=True)
     sector_alloc = pd.DataFrame(display_alloc).groupby("Sector")["Allocation %"].sum().reset_index()
@@ -819,10 +842,8 @@ if active == "Portfolio":
     fig_bar.update_layout(
         paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)",
         margin=dict(t=10, b=10, l=10, r=60),
-        xaxis=dict(showgrid=False, zeroline=False, showticklabels=False,
-                   color="#64748B"),
-        yaxis=dict(gridcolor="rgba(255,255,255,0.04)", color="#94A3B8",
-                   tickfont=dict(size=12)),
+        xaxis=dict(showgrid=False, zeroline=False, showticklabels=False, color="#64748B"),
+        yaxis=dict(gridcolor="rgba(255,255,255,0.04)", color="#94A3B8", tickfont=dict(size=12)),
         height=max(180, len(sector_alloc) * 46 + 40),
         bargap=0.35,
     )
@@ -839,13 +860,11 @@ elif active == "AI Reasoning":
 
     stock_options = [f"{r['Symbol']} — {r['Name']}" for r in display_alloc]
 
-    # Preserve selected stock in session state to avoid re-render jump
     if st.session_state.selected_stock not in stock_options:
         st.session_state.selected_stock = stock_options[0]
 
     def _on_stock_change():
         st.session_state.selected_stock = st.session_state._stock_selector
-        # Do NOT change active_tab
 
     selected = st.selectbox(
         "Select a stock to explain:",
@@ -912,7 +931,6 @@ elif active == "AI Reasoning":
             hovertemplate="<b>%{y}</b>: %{x:.1f}<extra></extra>",
             name="Score",
         ))
-        # Max markers
         for i, mx in enumerate(maxes[:len(components)]):
             fig_score.add_trace(go.Scatter(
                 x=[mx], y=[components[i]],
@@ -927,8 +945,7 @@ elif active == "AI Reasoning":
             paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)",
             margin=dict(t=36, b=10, l=10, r=50),
             xaxis=dict(showgrid=False, zeroline=False, showticklabels=False),
-            yaxis=dict(gridcolor="rgba(255,255,255,0.04)", color="#94A3B8",
-                       tickfont=dict(size=11)),
+            yaxis=dict(gridcolor="rgba(255,255,255,0.04)", color="#94A3B8", tickfont=dict(size=11)),
             height=260,
             bargap=0.3,
         )
@@ -936,24 +953,46 @@ elif active == "AI Reasoning":
 
 
 # ══════════════════════════════════════════════
-#  TAB: OPTIMIZATION
+#  TAB: OPTIMIZATION  (Fix 4 — safe convergence_fig)
 # ══════════════════════════════════════════════
 elif active == "Optimization":
 
     st.markdown('<div class="section-heading">⚙️ Optimisation Algorithm Results</div>', unsafe_allow_html=True)
 
-    hc_alloc    = D["hc_alloc"];    hc_history = D["hc_history"]
-    hc_iters    = D["hc_iters"];    hc_metrics = D["hc_metrics"]
-    sa_alloc    = D["sa_alloc"];    sa_history = D["sa_history"]
-    sa_iters    = D["sa_iters"];    sa_metrics = D["sa_metrics"]
+    hc_alloc   = D["hc_alloc"];   hc_history = D["hc_history"]
+    hc_iters   = D["hc_iters"];   hc_metrics = D["hc_metrics"]
+    sa_alloc   = D["sa_alloc"];   sa_history = D["sa_history"]
+    sa_iters   = D["sa_iters"];   sa_metrics = D["sa_metrics"]
 
+    # FIX 4 — safe convergence figure builder
     def convergence_fig(history, title, color):
+        """
+        Returns a Plotly Figure or None.
+        Guards against: None, empty list, nested structures, non-numeric values.
+        """
+        if not history:
+            return None
+        # Flatten to a clean list of floats — raises ValueError for bad data
+        try:
+            flat = [float(v) for v in history]
+        except (TypeError, ValueError):
+            return None
+        if len(flat) == 0:
+            return None
+
+        # Build a safe fill colour from the hex/rgb provided
+        if color.startswith("rgb("):
+            fill_color = color.replace("rgb(", "rgba(").replace(")", ",0.07)")
+        else:
+            fill_color = color + "12"   # hex with 07% alpha suffix
+
         fig = go.Figure()
         fig.add_trace(go.Scatter(
-            y=history, mode="lines",
+            y=flat,
+            mode="lines",
             line=dict(color=color, width=2),
             fill="tozeroy",
-            fillcolor=color.replace(")", ",0.07)").replace("rgb", "rgba") if "rgb" in color else color + "12",
+            fillcolor=fill_color,
             hovertemplate="Iter %{x}: %{y:.4f}<extra></extra>",
         ))
         fig.update_layout(
@@ -970,35 +1009,44 @@ elif active == "Optimization":
 
     if algo == "Both" and hc_metrics and sa_metrics:
         oc1, oc2 = st.columns(2, gap="medium")
+
         with oc1:
             st.markdown('<div class="panel">', unsafe_allow_html=True)
             st.markdown('<div class="panel-title">🔵 Hill Climbing</div>', unsafe_allow_html=True)
             for k, v in hc_metrics.items():
                 st.metric(k, v)
             st.caption(f"Iterations: {hc_iters}  |  ⚠️ May get stuck at local optima")
-            st.plotly_chart(convergence_fig(hc_history, "Hill Climbing Convergence", "#1E88E5"),
-                            use_container_width=True, config={"displayModeBar": False})
+            hc_fig = convergence_fig(hc_history, "Hill Climbing Convergence", "#1E88E5")
+            if hc_fig:
+                st.plotly_chart(hc_fig, use_container_width=True, config={"displayModeBar": False})
+            else:
+                st.caption("No convergence history available.")
             st.markdown('</div>', unsafe_allow_html=True)
+
         with oc2:
             st.markdown('<div class="panel">', unsafe_allow_html=True)
             st.markdown('<div class="panel-title">🟢 Simulated Annealing</div>', unsafe_allow_html=True)
             for k, v in sa_metrics.items():
                 st.metric(k, v)
             st.caption(f"Iterations: {sa_iters}  |  ✅ Escapes local optima")
-            st.plotly_chart(convergence_fig(sa_history, "Simulated Annealing Convergence", "#26A69A"),
-                            use_container_width=True, config={"displayModeBar": False})
+            sa_fig = convergence_fig(sa_history, "Simulated Annealing Convergence", "#26A69A")
+            if sa_fig:
+                st.plotly_chart(sa_fig, use_container_width=True, config={"displayModeBar": False})
+            else:
+                st.caption("No convergence history available.")
             st.markdown('</div>', unsafe_allow_html=True)
 
-        # Scatter
+        # Risk vs Return scatter
         st.markdown('<div class="section-heading">Risk vs Return Comparison</div>', unsafe_allow_html=True)
         st.markdown('<div class="panel">', unsafe_allow_html=True)
         fig_scatter = go.Figure()
         for label, metrics, clr in [
-            ("Hill Climbing", hc_metrics, "#1E88E5"),
+            ("Hill Climbing",      hc_metrics, "#1E88E5"),
             ("Simulated Annealing", sa_metrics, "#26A69A"),
         ]:
             fig_scatter.add_trace(go.Scatter(
-                x=[metrics["Portfolio Risk"]], y=[metrics["Expected Return (%)"]],
+                x=[metrics["Portfolio Risk"]],
+                y=[metrics["Expected Return (%)"]],
                 mode="markers+text",
                 marker=dict(size=18, color=clr, line=dict(color="white", width=2)),
                 text=[label], textposition="top center",
@@ -1018,18 +1066,22 @@ elif active == "Optimization":
         st.markdown('</div>', unsafe_allow_html=True)
 
     else:
+        # Single algorithm view
         history = hc_history if algo == "Hill Climbing" else sa_history
         n_iters = hc_iters   if algo == "Hill Climbing" else sa_iters
         metrics = hc_metrics if algo == "Hill Climbing" else sa_metrics
         clr     = "#1E88E5"  if algo == "Hill Climbing" else "#26A69A"
 
         st.markdown('<div class="panel">', unsafe_allow_html=True)
-        for k, v in metrics.items():
-            st.metric(k, v)
+        if metrics:
+            for k, v in metrics.items():
+                st.metric(k, v)
         st.caption(f"Total iterations: {n_iters}")
-        if history:
-            st.plotly_chart(convergence_fig(history, f"{algo} Convergence", clr),
-                            use_container_width=True, config={"displayModeBar": False})
+        single_fig = convergence_fig(history, f"{algo} Convergence", clr)
+        if single_fig:
+            st.plotly_chart(single_fig, use_container_width=True, config={"displayModeBar": False})
+        else:
+            st.caption("No convergence history to display.")
         st.markdown('</div>', unsafe_allow_html=True)
 
 
