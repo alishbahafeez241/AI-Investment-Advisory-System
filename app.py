@@ -338,14 +338,17 @@ def simulated_annealing(stocks, iterations=100, T_start=1000, T_end=0.01):
 with st.sidebar:
 
     st.markdown("""
-<div style="
+    
+    
+    <div style="
+   
     background: linear-gradient(135deg,#1d4ed8,#3b82f6);
     color:white;
     padding:18px;
     border-radius:14px;
     text-align:center;
     margin-bottom:20px;
-">
+    ">
     <div style="font-size:2.2rem;">📊</div>
 
     <div style="
