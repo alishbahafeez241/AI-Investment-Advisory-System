@@ -298,30 +298,37 @@ else:  # Both — show SA as primary (better)
     display_metrics = sa_metrics
 
 # ─────────────────────────────────────────────
-#  TAB LAYOUT
+# NAVIGATION (FIXED + CLEAN)
 # ─────────────────────────────────────────────
-tab1, tab2, tab3, tab4 = st.tabs(
-    ["📊 Portfolio", "🧠 AI Reasoning", "⚙️ Optimization", "📋 All Scored Stocks"]
+page = st.radio(
+    "",
+    ["Portfolio", "AI Reasoning", "Optimization", "All Scored Stocks"],
+    horizontal=True,
+    key="nav_page"
 )
 
 # ══════════════════════════════════════
 #  TAB 1 — PORTFOLIO
 # ══════════════════════════════════════
-with tab1:
+if page == "Portfolio":
     st.subheader("Portfolio Overview")
 
-    # Metrics row
     m1, m2, m3, m4 = st.columns(4)
+
     m1.markdown(f"""<div class="metric-box"><h4>Expected Return</h4>
         <p>{display_metrics['Expected Return (%)']:.1f}%</p></div>""", unsafe_allow_html=True)
+
     m2.markdown(f"""<div class="metric-box"><h4>Portfolio Risk</h4>
         <p>{display_metrics['Portfolio Risk']:.3f}</p></div>""", unsafe_allow_html=True)
+
     m3.markdown(f"""<div class="metric-box"><h4>Avg Dividend Yield</h4>
         <p>{display_metrics['Avg Dividend Yield']:.1f}%</p></div>""", unsafe_allow_html=True)
+
     m4.markdown(f"""<div class="metric-box"><h4>Sharpe Ratio</h4>
         <p>{display_metrics['Sharpe-like Ratio']:.2f}</p></div>""", unsafe_allow_html=True)
 
     st.markdown("---")
+
     col_pie, col_tbl = st.columns([1, 1])
 
     with col_pie:
@@ -334,37 +341,44 @@ with tab1:
         alloc_df = pd.DataFrame(display_alloc)
         alloc_df["Amount (PKR)"] = alloc_df["Amount (PKR)"].apply(lambda x: f"₨ {x:,}")
         alloc_df["Score"] = alloc_df["Score"].apply(lambda x: f"{x:.0f}/100")
+
         st.dataframe(
             alloc_df[["Symbol", "Name", "Sector", "Score", "Allocation %", "Amount (PKR)"]],
-            use_container_width=True, hide_index=True, height=320
+            use_container_width=True,
+            hide_index=True,
+            height=320
         )
 
-    # Sector breakdown bar
     st.markdown("---")
     st.subheader("Sector Distribution")
+
     sector_alloc = pd.DataFrame(display_alloc).groupby("Sector")["Allocation %"].sum().reset_index()
+
     show(make_hbar(
         sector_alloc["Sector"].tolist(),
         sector_alloc["Allocation %"].tolist(),
         title="Allocation by Sector"
     ))
 
+
 # ══════════════════════════════════════
 #  TAB 2 — AI REASONING
 # ══════════════════════════════════════
-with tab2:
-    st.subheader("🧠 AI Recommendation Reasoning")
+elif page == "AI Reasoning":
+
+    st.subheader("AI Recommendation Reasoning")
 
     selected = st.selectbox(
         "Select a stock to explain:",
-        options=[f"{r['Symbol']} — {r['Name']}" for r in display_alloc]
+        options=[f"{r['Symbol']} — {r['Name']}" for r in display_alloc],
+        key="stock_explain"
     )
-    sym = selected.split(" — ")[0]
 
+    sym = selected.split(" — ")[0]
     stock_row = scored_df[scored_df["Symbol"] == sym].iloc[0]
     breakdown = stock_row["Breakdown"]
 
-    c1, c2 = st.columns([1, 1])
+    c1, c2 = st.columns(2)
 
     with c1:
         st.markdown(f"""
@@ -372,10 +386,10 @@ with tab2:
         <b style="color:#185FA5;font-size:15px;">Why {sym} was selected</b><br>
         <ul>
             <li>Growth (5yr): <b>{stock_row['Growth_5yr']*100:.1f}%</b></li>
-            <li>Volatility: <b>{stock_row['Volatility']:.2f}</b> {'✅ Low' if stock_row['Volatility']<0.15 else '⚠️ Moderate' if stock_row['Volatility']<0.25 else '🔴 High'}</li>
+            <li>Volatility: <b>{stock_row['Volatility']:.2f}</b></li>
             <li>Dividend Yield: <b>{stock_row['Dividend_Yield']:.1f}%</b></li>
-            <li>Sector: <b>{stock_row['Sector']}</b> {'✅ Preferred' if stock_row['Sector'] in preferred else '🔵 Neutral'}</li>
-            <li>Momentum Score: <b>{stock_row['Momentum_Score']:.2f}/1.0</b></li>
+            <li>Sector: <b>{stock_row['Sector']}</b></li>
+            <li>Momentum Score: <b>{stock_row['Momentum_Score']:.2f}</b></li>
             <li>AI Total Score: <b>{stock_row['Total_Score']:.1f}/100</b></li>
         </ul>
         </div>
@@ -383,65 +397,65 @@ with tab2:
 
     with c2:
         components = list(breakdown.keys())
-        scores     = list(breakdown.values())
-        maxes      = [30, 20, 15, 20, 15]
+        scores = list(breakdown.values())
+        maxes = [30, 20, 15, 20, 15]
         show(make_score_hbar(components, scores, maxes))
+
 
 # ══════════════════════════════════════
 #  TAB 3 — OPTIMIZATION
 # ══════════════════════════════════════
-with tab3:
-    st.subheader("⚙️ Optimization Algorithm Results")
+elif page == "Optimization":
+
+    st.subheader("Optimization Algorithm Results")
 
     if algo == "Both":
         oc1, oc2 = st.columns(2)
 
         with oc1:
-            st.markdown("### 🔵 Hill Climbing")
+            st.markdown("### Hill Climbing")
             for k, v in hc_metrics.items():
                 st.metric(k, v)
-            st.caption(f"Iterations: {hc_iters}  |  ⚠️ May get stuck at local optima")
-            show(make_line(hc_history, title="Hill Climbing Convergence", color="#185FA5"))
+            show(make_line(hc_history, "Hill Climbing Convergence"))
 
         with oc2:
-            st.markdown("### 🟢 Simulated Annealing")
+            st.markdown("### Simulated Annealing")
             for k, v in sa_metrics.items():
                 st.metric(k, v)
-            st.caption(f"Iterations: {sa_iters}  |  ✅ Escapes local optima")
-            show(make_line(sa_history, title="Simulated Annealing Convergence", color="#1D9E75"))
-
-        # Risk vs Return scatter
-        st.markdown("---")
-        st.subheader("Risk vs Return Comparison")
-        points = [
-            ("Hill Climbing",       hc_metrics["Portfolio Risk"], hc_metrics["Expected Return (%)"], "#185FA5"),
-            ("Simulated Annealing", sa_metrics["Portfolio Risk"], sa_metrics["Expected Return (%)"], "#1D9E75"),
-        ]
-        show(make_scatter(points))
+            show(make_line(sa_history, "Simulated Annealing Convergence"))
 
     else:
-        history = hc_history if algo == "Hill Climbing" else sa_history
-        n_iters = hc_iters   if algo == "Hill Climbing" else sa_iters
         metrics = hc_metrics if algo == "Hill Climbing" else sa_metrics
-        clr     = "#185FA5"  if algo == "Hill Climbing" else "#1D9E75"
+        history = hc_history if algo == "Hill Climbing" else sa_history
+        clr = "#185FA5" if algo == "Hill Climbing" else "#1D9E75"
 
         for k, v in metrics.items():
             st.metric(k, v)
-        st.caption(f"Total iterations: {n_iters}")
-        show(make_line(history, title=f"{algo} Convergence Curve", color=clr))
+
+        show(make_line(history, f"{algo} Convergence", clr))
+
 
 # ══════════════════════════════════════
 #  TAB 4 — ALL SCORED STOCKS
 # ══════════════════════════════════════
-with tab4:
+elif page == "All Scored Stocks":
+
     st.subheader("All Scored & Ranked Stocks")
-    display_cols = ["Symbol","Name","Sector","Total_Score","Growth_5yr","Volatility","Dividend_Yield","Momentum_Score"]
+
+    display_cols = [
+        "Symbol","Name","Sector","Total_Score",
+        "Growth_5yr","Volatility","Dividend_Yield","Momentum_Score"
+    ]
+
     show_df = scored_df[display_cols].copy()
-    show_df["Growth_5yr"]     = (show_df["Growth_5yr"] * 100).round(1).astype(str) + "%"
+    show_df["Growth_5yr"] = (show_df["Growth_5yr"] * 100).round(1).astype(str) + "%"
     show_df["Dividend_Yield"] = show_df["Dividend_Yield"].round(1).astype(str) + "%"
+
     st.dataframe(
         show_df.style.background_gradient(subset=["Total_Score"], cmap="Blues"),
-        use_container_width=True, hide_index=True, height=500
+        use_container_width=True,
+        hide_index=True,
+        height=500
     )
 
 # ─────────────────────────────────────────────
