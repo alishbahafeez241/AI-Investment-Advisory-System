@@ -306,21 +306,32 @@ def simulated_annealing(stocks, iterations=100, T_start=1000, T_end=0.01):
     return best_w, portfolio_value(best_w, stocks), history
 
 # ─────────────────────────────────────────────
-#  SIDEBAR  — INVESTOR SETTINGS
+#  SIDEBAR  — NAVIGATION ONLY
 # ─────────────────────────────────────────────
 with st.sidebar:
-    # ─────────────────────────────────────────────
-    #  NAVIGATION
-    # ─────────────────────────────────────────────
     page = st.radio("Navigation", ["Home", "Dashboard"], horizontal=True)
     st.markdown("<hr style='margin:8px 0;border-color:#e2e8f0;'>", unsafe_allow_html=True)
+    st.markdown("### Quick Info")
+    st.caption("Enter your investment preferences on the Home page, then switch to Dashboard to view your personalized portfolio analysis.")
+
+# ══════════════════════════════════════════════
+#  HOME PAGE  — USER INPUT
+# ══════════════════════════════════════════════
+if page == "Home":
+    st.markdown("""
+    <div style="text-align:center; padding:24px 20px 8px;">
+        <h1 style="color:#1d4ed8; font-size:2.2rem; font-weight:800; margin-bottom:8px;">PSX AI Investment Advisory</h1>
+        <p style="color:#475569; font-size:1.05rem; max-width:640px; margin:0 auto 24px;">
+            Enter your investment preferences below, then switch to <strong>Dashboard</strong> to view your personalized portfolio analysis.
+        </p>
+    </div>
+    """, unsafe_allow_html=True)
+
+    st.markdown('<div class="section-header">Investor Settings</div>', unsafe_allow_html=True)
 
     investor_name = st.text_input("Enter Your Name", value="", placeholder="e.g. Ali Khan")
     if investor_name:
         st.markdown(f"<div style='color:#1d4ed8;font-size:1rem;font-weight:700;margin-top:-4px;margin-bottom:8px;'>Welcome, {investor_name}</div>", unsafe_allow_html=True)
-
-    st.markdown("### INVESTOR SETTINGS")
-    st.divider()
 
     invest_amount = st.number_input(
         "Investment Amount (PKR)",
@@ -330,8 +341,12 @@ with st.sidebar:
     )
     st.markdown(f"<div style='color:#1d4ed8;font-size:1.1rem;font-weight:700;margin-top:-8px;margin-bottom:8px;'>Rs {invest_amount:,}</div>", unsafe_allow_html=True)
 
-    duration = st.slider("Duration (Years)", 1, 20, 5)
-    target_return = st.slider("Target Annual Return %", 5, 50, 20)
+    c1, c2 = st.columns(2)
+    with c1:
+        duration = st.slider("Duration (Years)", 1, 20, 5)
+    with c2:
+        target_return = st.slider("Target Annual Return %", 5, 50, 20)
+
     risk_appetite = st.radio("Risk Appetite", ["Low", "Medium", "High"], horizontal=True, index=1)
 
     preferred = st.multiselect(
@@ -339,7 +354,6 @@ with st.sidebar:
         options=ALL_SECTORS,
         default=["Banking", "Energy"],
     )
-
     excluded = st.multiselect(
         "Excluded Sectors",
         options=[sec for sec in ALL_SECTORS if sec not in preferred],
@@ -352,51 +366,33 @@ with st.sidebar:
     st.divider()
     run = st.button("Run Analysis", use_container_width=True)
 
-# ─────────────────────────────────────────────
-# ══════════════════════════════════════════════
-#  HOME PAGE
-# ══════════════════════════════════════════════
-if page == "Home":
-    st.markdown("""
-    <div style="text-align:center; padding:40px 20px;">
-        <h1 style="color:#1d4ed8; font-size:2.2rem; font-weight:800; margin-bottom:12px;">PSX AI Investment Advisory</h1>
-        <p style="color:#475569; font-size:1.1rem; max-width:600px; margin:0 auto 32px;">
-            Welcome! Use the sidebar to enter your investment preferences, then switch to <strong>Dashboard</strong> to view your personalized portfolio analysis.
-        </p>
-    </div>
-    """, unsafe_allow_html=True)
-
-    st.markdown('<div class="section-header">Your Current Settings</div>', unsafe_allow_html=True)
-
-    c1, c2, c3 = st.columns(3)
-    with c1:
-        st.metric("Investment Amount", f"Rs {invest_amount:,}")
-        st.metric("Duration", f"{duration} Years")
-    with c2:
-        st.metric("Target Return", f"{target_return}%")
-        st.metric("Risk Appetite", risk_appetite)
-    with c3:
-        st.metric("Portfolio Size", f"{portfolio_size} Stocks")
-        st.metric("Algorithm", algorithm)
-
-    st.markdown("<br>", unsafe_allow_html=True)
-
-    col1, col2 = st.columns(2)
-    with col1:
-        st.markdown("**Preferred Sectors:** " + (", ".join(preferred) if preferred else "None"))
-    with col2:
-        st.markdown("**Excluded Sectors:** " + (", ".join(excluded) if excluded else "None"))
-
-    if investor_name:
-        st.markdown(f"<div style='text-align:center;margin-top:24px;'><span style='background:#dbeafe;color:#1d4ed8;padding:8px 16px;border-radius:8px;font-weight:600;'>Investor: {investor_name}</span></div>", unsafe_allow_html=True)
-
-    st.markdown("""
-    <div style="text-align:center; margin-top:32px; padding:20px; background:#f1f5f9; border-radius:12px;">
-        <p style="color:#475569; font-size:1rem;">Click <strong>Run Analysis</strong> in the sidebar, then switch to <strong>Dashboard</strong> to see results.</p>
-    </div>
-    """, unsafe_allow_html=True)
+    # Save inputs into session so Dashboard can use them
+    st.session_state["investor_name"] = investor_name
+    st.session_state["invest_amount"] = invest_amount
+    st.session_state["duration"] = duration
+    st.session_state["target_return"] = target_return
+    st.session_state["risk_appetite"] = risk_appetite
+    st.session_state["preferred"] = preferred
+    st.session_state["excluded"] = excluded
+    st.session_state["portfolio_size"] = portfolio_size
+    st.session_state["algorithm"] = algorithm
+    if run:
+        st.session_state["run"] = True
 
     st.stop()
+
+# Dashboard page — pull inputs from session state (with sensible defaults)
+investor_name  = st.session_state.get("investor_name", "")
+invest_amount  = st.session_state.get("invest_amount", 5_000_000)
+duration       = st.session_state.get("duration", 5)
+target_return  = st.session_state.get("target_return", 20)
+risk_appetite  = st.session_state.get("risk_appetite", "Medium")
+preferred      = st.session_state.get("preferred", ["Banking", "Energy"])
+excluded       = st.session_state.get("excluded", [])
+portfolio_size = st.session_state.get("portfolio_size", 5)
+algorithm      = st.session_state.get("algorithm", "Hill Climbing")
+run            = st.session_state.pop("run", False)
+
 
 #  TITLE BAR
 # ─────────────────────────────────────────────
