@@ -359,7 +359,6 @@ with st.sidebar:
         unsafe_allow_html=True
     )
 
-
     investor_name = st.text_input(
         "Enter Your Name",
         value="",
