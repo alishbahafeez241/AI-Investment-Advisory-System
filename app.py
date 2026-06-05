@@ -137,6 +137,7 @@ html, body, [class*="css"] { font-family:'Inter',sans-serif; font-size:13px; }
 .istep p { color:#64748B; font-size:11px; margin:0; }
 
 .footer { text-align:center; color:#94A3B8; font-size:10px; padding:18px 0 6px; }
+.chart-title { font-size:12px; font-weight:600; color:#0F1B2D; margin:0 0 4px 0; padding:10px 14px 0; background:white; border:1px solid #E2E8F0; border-bottom:none; border-radius:8px 8px 0 0; }
 </style>
 """, unsafe_allow_html=True)
 
@@ -149,7 +150,8 @@ BG, GRID, TXT = "#FFFFFF", "#E8EDF4", "#0F1B2D"
 
 def _base_fig(w=6, h=3.0):
     fig, ax = plt.subplots(figsize=(w, h))
-    fig.patch.set_facecolor(BG); ax.set_facecolor(BG)
+    fig.patch.set_facecolor("#FFFFFF")
+    ax.set_facecolor("#FFFFFF")
     ax.tick_params(colors="#64748B", labelsize=7)
     for sp in ax.spines.values(): sp.set_edgecolor(GRID)
     ax.yaxis.grid(True, color=GRID, linewidth=.5, zorder=0)
@@ -490,38 +492,44 @@ elif page == "Optimization":
         # Top row: convergence curves | risk-return scatter
         c1, c2 = st.columns(2, gap="large")
         with c1:
-            st.markdown('<div class="sc"><h3>Convergence Curves</h3>', unsafe_allow_html=True)
+            st.markdown('<p class="chart-title">Convergence Curves</p>', unsafe_allow_html=True)
             show(make_dual_line(hc_history, sa_history))
-            st.markdown('</div>', unsafe_allow_html=True)
         with c2:
-            st.markdown('<div class="sc"><h3>Risk vs Return Scatter</h3>', unsafe_allow_html=True)
+            st.markdown('<p class="chart-title">Risk vs Return Scatter</p>', unsafe_allow_html=True)
             show(make_scatter(top_stocks, hc_weights, sa_weights))
-            st.markdown('</div>', unsafe_allow_html=True)
 
-        # Score boxes
+        # Score boxes + Algorithm Comparison — all in one markdown call each
         hc_best = max(hc_history); sa_best = max(sa_history)
+        diff    = round(abs(sa_best - hc_best), 4)
         winner  = "SA" if sa_best > hc_best else "HC"
         b1, b2, b3 = st.columns([1,1,2], gap="medium")
         with b1:
             st.markdown(
-                '<div class="am"><div class="aml">HC Best Score</div>'
+                '<div class="am">'
+                '<div class="aml">HC BEST SCORE</div>'
                 '<div class="amv" style="color:#1a3fcc;">'+str(round(hc_best,3))+'</div>'
-                '<div class="ams">Iterations: '+str(hc_iters)+'</div></div>',
+                '<div class="ams">Iterations: '+str(hc_iters)+'</div>'
+                '</div>',
                 unsafe_allow_html=True)
         with b2:
             st.markdown(
-                '<div class="am"><div class="aml">SA Best Score</div>'
+                '<div class="am">'
+                '<div class="aml">SA BEST SCORE</div>'
                 '<div class="amv" style="color:#1D9E75;">'+str(round(sa_best,3))+'</div>'
-                '<div class="ams">Temp: 1000 → 0.01</div></div>',
+                '<div class="ams">Temp: 1000 → 0.01</div>'
+                '</div>',
                 unsafe_allow_html=True)
         with b3:
-            st.markdown('<div class="sc" style="margin-bottom:0;">', unsafe_allow_html=True)
-            st.markdown('<p style="font-size:11px;font-weight:600;color:#0F1B2D;margin-bottom:6px;">Algorithm Comparison</p>', unsafe_allow_html=True)
             st.markdown(
-                '<p style="font-size:11px;color:#374151;">SA found a marginally better portfolio (+'+str(round(abs(sa_best-hc_best),4))+') by escaping local optima; SA converged faster. Both are appropriate for this portfolio size.<br>'
-                '<span style="font-size:10px;color:#64748B;">Recommendation: use SA for large portfolios (N &gt; 8 stocks).</span></p>',
+                '<div class="sc" style="margin-bottom:0;height:100%;">'
+                '<p style="font-size:11px;font-weight:700;color:#0F1B2D;margin:0 0 6px 0;">Algorithm Comparison</p>'
+                '<p style="font-size:11px;color:#374151;margin:0 0 4px 0;">'
+                'SA found a marginally better portfolio (+'+str(diff)+') by escaping local optima; '
+                'SA converged faster. Both are appropriate for this portfolio size.</p>'
+                '<p style="font-size:10px;color:#64748B;margin:0;">'
+                'Recommendation: use SA for large portfolios (N &gt; 8 stocks).</p>'
+                '</div>',
                 unsafe_allow_html=True)
-            st.markdown('</div>', unsafe_allow_html=True)
 
     else:
         # Single algorithm — convergence + metrics
@@ -533,14 +541,12 @@ elif page == "Optimization":
 
         c1, c2 = st.columns(2, gap="large")
         with c1:
-            st.markdown('<div class="sc"><h3>'+algo+' Convergence</h3>', unsafe_allow_html=True)
+            st.markdown('<p class="chart-title">'+algo+' Convergence</p>', unsafe_allow_html=True)
             show(make_line(history, algo+" Convergence", clr))
-            st.markdown('</div>', unsafe_allow_html=True)
         with c2:
-            st.markdown('<div class="sc"><h3>Risk vs Return Scatter</h3>', unsafe_allow_html=True)
+            st.markdown('<p class="chart-title">Risk vs Return Scatter</p>', unsafe_allow_html=True)
             w = hc_weights if algo=="Hill Climbing" else sa_weights
             show(make_scatter(top_stocks, w, w))
-            st.markdown('</div>', unsafe_allow_html=True)
 
         st.markdown(
             '<div class="am" style="max-width:180px;margin-bottom:14px;">'
