@@ -23,214 +23,124 @@ st.markdown("""
 <style>
 @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600;700&family=DM+Mono:wght@400;500&display=swap');
 
-/* ── Global ── */
 html, body, [class*="css"] { font-family: 'DM Sans', sans-serif; }
 
-.stApp {
-    background: linear-gradient(135deg, #0b1120 0%, #0f1a2e 60%, #0d1520 100%);
-    color: #e2e8f0;
-}
+.stApp { background: #f5f7fb; color: #0f172a; }
 
-/* ── Sidebar ── */
-section[data-testid="stSidebar"] {
-    background: linear-gradient(180deg, #0d1829 0%, #091324 100%);
-    border-right: 1px solid rgba(59,130,246,0.2);
-}
+section[data-testid="stSidebar"] { background: #ffffff; border-right: 1px solid #e2e8f0; }
+section[data-testid="stSidebar"] * { color: #0f172a !important; }
 section[data-testid="stSidebar"] .stMarkdown h3 {
-    color: #94a3b8;
-    font-size: 0.7rem;
-    letter-spacing: 0.12em;
-    text-transform: uppercase;
-    font-weight: 600;
+    color: #1e3a8a !important; font-size: 0.8rem; letter-spacing: 0.10em;
+    text-transform: uppercase; font-weight: 700;
 }
 
-/* ── Title bar ── */
 .title-bar {
-    background: linear-gradient(90deg, #0f2044 0%, #1a3a6e 50%, #0f2044 100%);
-    border-bottom: 1px solid rgba(59,130,246,0.35);
-    padding: 14px 28px;
-    text-align: center;
-    margin: -1rem -1rem 1.2rem -1rem;
-    font-size: 1.25rem;
-    font-weight: 700;
-    letter-spacing: 0.02em;
-    color: #e2e8f0;
+    background: linear-gradient(90deg, #1d4ed8 0%, #2563eb 50%, #1d4ed8 100%);
+    border-bottom: 1px solid #1e40af;
+    padding: 16px 28px; text-align: center; margin: -1rem -1rem 1.2rem -1rem;
+    font-size: 1.3rem; font-weight: 700; letter-spacing: 0.02em; color: #ffffff;
 }
 
-/* ── Metric cards ── */
 .metric-card {
-    background: linear-gradient(135deg, #112240 0%, #0f1e38 100%);
-    border: 1px solid rgba(59,130,246,0.25);
-    border-radius: 12px;
-    padding: 18px 22px;
-    text-align: center;
+    background: #ffffff; border: 1px solid #e2e8f0; border-radius: 12px;
+    padding: 18px 22px; text-align: center;
+    box-shadow: 0 1px 3px rgba(15,23,42,0.06);
     transition: transform .2s, box-shadow .2s;
 }
-.metric-card:hover { transform: translateY(-2px); box-shadow: 0 8px 32px rgba(59,130,246,.2); }
-.metric-label { font-size: 0.72rem; color: #94a3b8; letter-spacing: 0.06em; text-transform: uppercase; margin-bottom: 6px; }
-.metric-value { font-size: 2rem; font-weight: 700; color: #60a5fa; font-family: 'DM Mono', monospace; }
-.metric-sub { font-size: 0.75rem; color: #4ade80; margin-top: 4px; }
-.metric-sub.warn { color: #facc15; }
+.metric-card:hover { transform: translateY(-2px); box-shadow: 0 8px 24px rgba(37,99,235,.15); }
+.metric-label { font-size: 0.75rem; color: #475569; letter-spacing: 0.06em; text-transform: uppercase; margin-bottom: 6px; font-weight: 600; }
+.metric-value { font-size: 2rem; font-weight: 700; color: #1d4ed8; font-family: 'DM Mono', monospace; }
+.metric-sub { font-size: 0.78rem; color: #16a34a; margin-top: 4px; font-weight: 600; }
+.metric-sub.warn { color: #d97706; }
 
-/* ── Stock table ── */
-.stock-table { width: 100%; border-collapse: collapse; font-size: 0.85rem; }
+.stock-table { width: 100%; border-collapse: collapse; font-size: 0.9rem; background:#ffffff; border-radius: 8px; overflow:hidden; box-shadow: 0 1px 3px rgba(15,23,42,0.06); }
 .stock-table th {
-    background: #0f2044;
-    color: #94a3b8;
-    text-transform: uppercase;
-    font-size: 0.7rem;
-    letter-spacing: 0.08em;
-    padding: 10px 14px;
-    border-bottom: 1px solid rgba(59,130,246,0.3);
-    text-align: left;
+    background: #1d4ed8; color: #ffffff; text-transform: uppercase;
+    font-size: 0.72rem; letter-spacing: 0.08em; padding: 12px 14px; text-align: left;
 }
-.stock-table td { padding: 10px 14px; border-bottom: 1px solid rgba(255,255,255,0.05); }
-.stock-table tr:hover td { background: rgba(59,130,246,0.08); }
-.symbol { color: #60a5fa; font-weight: 700; font-family: 'DM Mono', monospace; }
-.score-badge {
-    display: inline-block;
-    padding: 2px 10px;
-    border-radius: 20px;
-    font-weight: 700;
-    font-family: 'DM Mono', monospace;
-    font-size: 0.8rem;
-}
-.score-high { background: rgba(59,130,246,0.2); color: #60a5fa; }
-.score-mid  { background: rgba(250,204,21,0.15); color: #fcd34d; }
-.score-low  { background: rgba(148,163,184,0.15); color: #94a3b8; }
-.ret-pos { color: #4ade80; font-weight: 600; }
-.ret-med { color: #fb923c; font-weight: 600; }
-.status-top    { color: #f59e0b; font-weight: 700; }
-.status-rec    { color: #60a5fa; font-weight: 600; }
-.status-sel    { color: #4ade80; font-weight: 600; }
-.status-con    { color: #94a3b8; }
-.status-neu    { color: #64748b; }
+.stock-table td { padding: 11px 14px; border-bottom: 1px solid #e2e8f0; color:#0f172a; }
+.stock-table tr:hover td { background: #eff6ff; }
+.symbol { color: #1d4ed8; font-weight: 700; font-family: 'DM Mono', monospace; }
+.score-badge { display: inline-block; padding: 3px 12px; border-radius: 20px; font-weight: 700; font-family: 'DM Mono', monospace; font-size: 0.82rem; }
+.score-high { background: #dbeafe; color: #1d4ed8; }
+.score-mid  { background: #fef3c7; color: #b45309; }
+.score-low  { background: #e2e8f0; color: #475569; }
+.ret-pos { color: #16a34a; font-weight: 600; }
+.ret-med { color: #ea580c; font-weight: 600; }
+.status-top { color: #b45309; font-weight: 700; }
+.status-rec { color: #1d4ed8; font-weight: 600; }
+.status-sel { color: #16a34a; font-weight: 600; }
+.status-con { color: #475569; }
+.status-neu { color: #64748b; }
 
-/* ── Reasoning cards ── */
 .reason-card {
-    background: linear-gradient(145deg, #112240 0%, #0e1d36 100%);
-    border: 1px solid rgba(59,130,246,0.3);
-    border-radius: 14px;
-    padding: 22px;
-    height: 100%;
+    background: #ffffff; border: 1px solid #e2e8f0; border-radius: 14px;
+    padding: 22px; height: 100%; box-shadow: 0 1px 3px rgba(15,23,42,0.06);
 }
-.reason-card .ticker { font-size: 1.4rem; font-weight: 800; color: #60a5fa; }
-.reason-card .cname  { font-size: 0.78rem; color: #94a3b8; margin-bottom: 4px; }
+.reason-card .ticker { font-size: 1.5rem; font-weight: 800; color: #1d4ed8; }
+.reason-card .cname  { font-size: 0.82rem; color: #475569; margin-bottom: 6px; }
 .reason-card .sector-tag {
-    display: inline-block;
-    background: rgba(59,130,246,0.15);
-    color: #93c5fd;
-    border-radius: 6px;
-    padding: 2px 10px;
-    font-size: 0.72rem;
-    font-weight: 600;
-    margin-bottom: 14px;
+    display: inline-block; background: #dbeafe; color: #1d4ed8;
+    border-radius: 6px; padding: 3px 10px; font-size: 0.75rem; font-weight: 600; margin-bottom: 14px;
 }
-.reason-metric { display: flex; justify-content: space-between; margin-bottom: 8px; font-size: 0.82rem; }
-.reason-metric .lbl { color: #94a3b8; }
+.reason-metric { display: flex; justify-content: space-between; margin-bottom: 8px; font-size: 0.86rem; color:#0f172a; }
+.reason-metric .lbl { color: #475569; }
 .reason-card .reasoning-text {
-    font-size: 0.78rem;
-    color: #cbd5e1;
-    line-height: 1.6;
-    margin: 12px 0;
-    padding: 10px;
-    background: rgba(255,255,255,0.04);
-    border-radius: 8px;
-    border-left: 3px solid #3b82f6;
+    font-size: 0.82rem; color: #1e293b; line-height: 1.6;
+    margin: 12px 0; padding: 12px; background: #f1f5f9; border-radius: 8px; border-left: 3px solid #2563eb;
 }
 .alloc-badge {
-    background: rgba(59,130,246,0.2);
-    color: #93c5fd;
-    border-radius: 6px;
-    padding: 4px 12px;
-    font-size: 0.8rem;
-    font-weight: 700;
-    font-family: 'DM Mono', monospace;
+    background: #1d4ed8; color: #ffffff; border-radius: 6px;
+    padding: 5px 14px; font-size: 0.82rem; font-weight: 700; font-family: 'DM Mono', monospace;
 }
 
-/* ── Optimization cards ── */
 .algo-card {
-    background: linear-gradient(145deg, #112240, #0e1d36);
-    border: 1px solid rgba(59,130,246,0.25);
-    border-radius: 12px;
-    padding: 20px;
-    text-align: center;
+    background: #ffffff; border: 1px solid #e2e8f0; border-radius: 12px;
+    padding: 20px; text-align: center; box-shadow: 0 1px 3px rgba(15,23,42,0.06);
 }
-.algo-label { font-size: 0.72rem; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.08em; }
+.algo-label { font-size: 0.75rem; color: #475569; text-transform: uppercase; letter-spacing: 0.08em; font-weight:600; }
 .algo-value { font-size: 2.2rem; font-weight: 800; font-family: 'DM Mono', monospace; }
-.algo-hc { color: #60a5fa; }
-.algo-sa { color: #f87171; }
+.algo-hc { color: #1d4ed8; }
+.algo-sa { color: #dc2626; }
 
-/* ── Section headers ── */
 .section-header {
-    font-size: 1rem;
-    font-weight: 700;
-    color: #e2e8f0;
-    margin: 1rem 0 0.6rem 0;
-    padding-bottom: 6px;
-    border-bottom: 1px solid rgba(59,130,246,0.2);
+    font-size: 1.05rem; font-weight: 700; color: #0f172a;
+    margin: 1rem 0 0.6rem 0; padding-bottom: 6px; border-bottom: 2px solid #2563eb;
 }
 
-/* ── Progress bar ── */
-.prog-row { display: flex; align-items: center; margin-bottom: 10px; font-size: 0.8rem; }
-.prog-label { width: 160px; color: #94a3b8; }
-.prog-bar-outer { flex: 1; background: rgba(255,255,255,0.07); border-radius: 6px; height: 8px; overflow: hidden; }
-.prog-bar-inner { height: 100%; border-radius: 6px; background: linear-gradient(90deg, #3b82f6, #60a5fa); }
-.prog-val { width: 36px; text-align: right; color: #60a5fa; font-family: 'DM Mono', monospace; margin-left: 8px; }
+.prog-row { display: flex; align-items: center; margin-bottom: 10px; font-size: 0.85rem; }
+.prog-label { width: 160px; color: #475569; }
+.prog-bar-outer { flex: 1; background: #e2e8f0; border-radius: 6px; height: 8px; overflow: hidden; }
+.prog-bar-inner { height: 100%; border-radius: 6px; background: linear-gradient(90deg, #1d4ed8, #60a5fa); }
+.prog-val { width: 36px; text-align: right; color: #1d4ed8; font-family: 'DM Mono', monospace; margin-left: 8px; font-weight:600; }
 
-/* ── Sidebar buttons ── */
 div[data-testid="stButton"] > button {
-    background: linear-gradient(135deg, #1d4ed8, #2563eb);
-    color: white;
-    border: none;
-    border-radius: 10px;
-    font-weight: 700;
-    font-size: 0.92rem;
-    padding: 10px 0;
-    width: 100%;
-    transition: all .2s;
-    letter-spacing: 0.04em;
+    background: #1d4ed8; color: #ffffff !important; border: none;
+    border-radius: 10px; font-weight: 700; font-size: 0.95rem;
+    padding: 10px 0; width: 100%; transition: all .2s; letter-spacing: 0.04em;
 }
 div[data-testid="stButton"] > button:hover {
-    background: linear-gradient(135deg, #2563eb, #3b82f6);
-    transform: translateY(-1px);
-    box-shadow: 0 6px 20px rgba(59,130,246,.4);
+    background: #2563eb; transform: translateY(-1px); box-shadow: 0 6px 18px rgba(37,99,235,.35);
 }
 
-/* ── Tab styling ── */
 .stTabs [data-baseweb="tab-list"] {
-    background: rgba(15,32,68,0.8);
-    border-radius: 12px;
-    padding: 4px;
-    gap: 4px;
-    border: 1px solid rgba(59,130,246,0.2);
+    background: #ffffff; border-radius: 12px; padding: 4px; gap: 4px; border: 1px solid #e2e8f0;
 }
 .stTabs [data-baseweb="tab"] {
-    border-radius: 8px;
-    color: #94a3b8;
-    font-weight: 600;
-    font-size: 0.85rem;
-    padding: 8px 20px;
+    border-radius: 8px; color: #475569; font-weight: 600; font-size: 0.9rem; padding: 8px 20px;
 }
-.stTabs [aria-selected="true"] {
-    background: linear-gradient(135deg, #1d4ed8, #2563eb) !important;
-    color: white !important;
-}
+.stTabs [aria-selected="true"] { background: #1d4ed8 !important; color: #ffffff !important; }
 
-/* hide streamlit default elements */
 #MainMenu { visibility: hidden; }
 footer { visibility: hidden; }
 header { visibility: hidden; }
 
-/* Sidebar inputs */
-.stSlider > div > div { color: #60a5fa; }
-label { color: #94a3b8 !important; font-size: 0.82rem !important; font-weight: 500 !important; }
-.stNumberInput input, .stSelectbox select {
-    background: #0d1829 !important;
-    border: 1px solid rgba(59,130,246,0.3) !important;
-    color: #e2e8f0 !important;
-    border-radius: 8px !important;
+label { color: #0f172a !important; font-size: 0.88rem !important; font-weight: 600 !important; }
+.stNumberInput input, .stSelectbox div[data-baseweb="select"] > div, .stMultiSelect div[data-baseweb="select"] > div, .stTextInput input {
+    background: #ffffff !important; border: 1px solid #cbd5e1 !important;
+    color: #0f172a !important; border-radius: 8px !important;
 }
+.stRadio label, .stCheckbox label { color: #0f172a !important; }
 </style>
 """, unsafe_allow_html=True)
 
@@ -399,7 +309,11 @@ def simulated_annealing(stocks, iterations=100, T_start=1000, T_end=0.01):
 #  SIDEBAR  — INVESTOR SETTINGS
 # ─────────────────────────────────────────────
 with st.sidebar:
-    st.markdown("### ⚙ INVESTOR SETTINGS")
+    investor_name = st.text_input("Enter Your Name", value="", placeholder="e.g. Ali Khan")
+    if investor_name:
+        st.markdown(f"<div style='color:#1d4ed8;font-size:1rem;font-weight:700;margin-top:-4px;margin-bottom:8px;'>Welcome, {investor_name}</div>", unsafe_allow_html=True)
+
+    st.markdown("### INVESTOR SETTINGS")
     st.divider()
 
     invest_amount = st.number_input(
@@ -408,38 +322,34 @@ with st.sidebar:
         value=5_000_000, step=100_000,
         format="%d"
     )
-    st.markdown(f"<div style='color:#60a5fa;font-size:1.1rem;font-weight:700;margin-top:-8px;margin-bottom:8px;'>Rs {invest_amount:,}</div>", unsafe_allow_html=True)
+    st.markdown(f"<div style='color:#1d4ed8;font-size:1.1rem;font-weight:700;margin-top:-8px;margin-bottom:8px;'>Rs {invest_amount:,}</div>", unsafe_allow_html=True)
 
     duration = st.slider("Duration (Years)", 1, 20, 5)
     target_return = st.slider("Target Annual Return %", 5, 50, 20)
     risk_appetite = st.radio("Risk Appetite", ["Low", "Medium", "High"], horizontal=True, index=1)
 
-    st.markdown("**Preferred Sectors**")
-    pref_cols = st.columns(2)
-    preferred = []
-    for i, sec in enumerate(ALL_SECTORS):
-        col = pref_cols[i % 2]
-        if col.checkbox(sec, value=(sec in ["Banking", "Energy"]), key=f"pref_{sec}"):
-            preferred.append(sec)
+    preferred = st.multiselect(
+        "Preferred Sectors",
+        options=ALL_SECTORS,
+        default=["Banking", "Energy"],
+    )
 
-    st.markdown("**Excluded Sectors**")
-    excl_cols = st.columns(2)
-    excluded = []
-    for i, sec in enumerate(ALL_SECTORS):
-        col = excl_cols[i % 2]
-        if col.checkbox(sec, value=False, key=f"excl_{sec}"):
-            excluded.append(sec)
+    excluded = st.multiselect(
+        "Excluded Sectors",
+        options=[sec for sec in ALL_SECTORS if sec not in preferred],
+        default=[],
+    )
 
     portfolio_size = st.select_slider("Portfolio Size", options=[3, 5, 7, 10], value=5)
-    algorithm = st.radio("Algorithm", ["Hill Climbing", "Sim. Annealing"], horizontal=True)
+    algorithm = st.radio("Algorithm", ["Hill Climbing", "Sim. Annealing", "Both"], horizontal=True)
 
     st.divider()
-    run = st.button("🚀  Run Analysis", use_container_width=True)
+    run = st.button("Run Analysis", use_container_width=True)
 
 # ─────────────────────────────────────────────
 #  TITLE BAR
 # ─────────────────────────────────────────────
-st.markdown('<div class="title-bar">📊 PSX AI Investment Advisory System — Streamlit Dashboard</div>', unsafe_allow_html=True)
+st.markdown('<div class="title-bar">PSX AI Investment Advisory System — Streamlit Dashboard</div>', unsafe_allow_html=True)
 
 # ─────────────────────────────────────────────
 #  COMPUTE  (on first load or button press)
@@ -454,8 +364,11 @@ if "results" not in st.session_state or run:
 
     if algorithm == "Hill Climbing":
         opt_weights = hc_w
-    else:
+    elif algorithm == "Sim. Annealing":
         opt_weights = sa_w
+    else:  # Both — blend the two solutions
+        opt_weights = (hc_w + sa_w) / 2
+        opt_weights = opt_weights / opt_weights.sum()
 
     # Update allocations from optimiser
     opt_allocs = (opt_weights * 100).round(1)
@@ -493,7 +406,7 @@ R = st.session_state.results
 # ─────────────────────────────────────────────
 #  TABS
 # ─────────────────────────────────────────────
-tab1, tab2, tab3, tab4 = st.tabs(["📈 Portfolio", "🤖 AI Reasoning", "⚡ Optimization", "📋 All Stocks"])
+tab1, tab2, tab3, tab4 = st.tabs(["Portfolio", "AI Reasoning", "Optimization", "All Stocks"])
 
 # ══════════════════════════════════════════════
 #  TAB 1 — PORTFOLIO
@@ -506,14 +419,14 @@ with tab1:
         <div class="metric-card">
             <div class="metric-label">Expected Return</div>
             <div class="metric-value">{R['exp_return']}%</div>
-            <div class="metric-sub">{'▲ Above target' if R['exp_return'] >= R['target'] else '▼ Below target'}</div>
+            <div class="metric-sub">{'Above target' if R['exp_return'] >= R['target'] else 'Below target'}</div>
         </div>""", unsafe_allow_html=True)
     with m2:
         st.markdown(f"""
         <div class="metric-card">
             <div class="metric-label">Portfolio Risk</div>
             <div class="metric-value">{R['port_risk']}</div>
-            <div class="metric-sub">✓ Within tolerance</div>
+            <div class="metric-sub">Within tolerance</div>
         </div>""", unsafe_allow_html=True)
     with m3:
         st.markdown(f"""
@@ -528,7 +441,7 @@ with tab1:
         <div class="metric-card">
             <div class="metric-label">Sharpe Ratio</div>
             <div class="metric-value">{R['sharpe']}</div>
-            <div class="metric-sub">★ {qual}</div>
+            <div class="metric-sub">{qual}</div>
         </div>""", unsafe_allow_html=True)
 
     st.markdown("<br>", unsafe_allow_html=True)
@@ -785,11 +698,11 @@ with tab4:
     rows = ""
     for i, s in enumerate(top10):
         if s['symbol'] == top10[0]['symbol']:
-            status = '<span class="status-top">★ Top Pick</span>'
+            status = '<span class="status-top">Top Pick</span>'
         elif s['symbol'] == top10[1]['symbol'] if len(top10) > 1 else None:
-            status = '<span class="status-rec">★ Recommended</span>'
+            status = '<span class="status-rec">Recommended</span>'
         elif s['symbol'] in port_syms:
-            status = '<span class="status-sel">✓ Selected</span>'
+            status = '<span class="status-sel">Selected</span>'
         elif s['score'] >= 60:
             status = '<span class="status-con">Consider</span>'
         else:
@@ -823,8 +736,8 @@ with tab4:
 
     st.markdown("""
     <div style="display:flex;gap:24px;margin-top:14px;font-size:0.77rem;color:#64748b;">
-      <span>⬛ Top 5 — Selected for Portfolio</span>
-      <span>⬜ Remaining — Considered but not selected</span>
+      <span>Top 5 — Selected for Portfolio</span>
+      <span>Remaining — Considered but not selected</span>
       <span style="margin-left:auto;">Score ≥ 80: Top Tier | 60-79: Good | &lt; 60: Marginal</span>
     </div>
     <div style="text-align:center;color:#475569;font-size:0.72rem;margin-top:12px;">All Stocks Tab • Scores calculated using 5-component weighted heuristic with risk appetite adjustment</div>
