@@ -332,7 +332,7 @@ def simulated_annealing(stocks, iterations=100, T_start=1000, T_end=0.01):
     return best_w, portfolio_value(best_w, stocks), history
 
 # ─────────────────────────────────────────────
-#  SIDEBAR  — INVESTOR SETTINGS
+#  SIDEBAR — INVESTOR SETTINGS
 # ─────────────────────────────────────────────
 
 with st.sidebar:
@@ -355,45 +355,95 @@ with st.sidebar:
     investor_name = st.text_input(
         "Enter Your Name",
         value="",
-        placeholder="e.g. Ali Khan"
+        placeholder="e.g. Ali Khan",
+        key="investor_name"
     )
-with st.sidebar:
-    investor_name = st.text_input("Enter Your Name", value="", placeholder="e.g. Ali Khan")
+
     if investor_name:
-        st.markdown(f"<div style='color:#1d4ed8;font-size:1rem;font-weight:700;margin-top:-4px;margin-bottom:8px;'>Welcome, {investor_name}</div>", unsafe_allow_html=True)
+        st.markdown(
+            f"""
+            <div style="
+                color:#1d4ed8;
+                font-size:1rem;
+                font-weight:700;
+                margin-top:-4px;
+                margin-bottom:8px;
+            ">
+                Welcome, {investor_name}
+            </div>
+            """,
+            unsafe_allow_html=True
+        )
 
     st.markdown("### INVESTOR SETTINGS")
     st.divider()
 
     invest_amount = st.number_input(
         "Investment Amount (PKR)",
-        min_value=100_000, max_value=100_000_000,
-        value=5_000_000, step=100_000,
+        min_value=100_000,
+        max_value=100_000_000,
+        value=5_000_000,
+        step=100_000,
         format="%d"
     )
-    st.markdown(f"<div style='color:#1d4ed8;font-size:1.1rem;font-weight:700;margin-top:-8px;margin-bottom:8px;'>Rs {invest_amount:,}</div>", unsafe_allow_html=True)
+
+    st.markdown(
+        f"""
+        <div style='color:#1d4ed8;
+                    font-size:1.1rem;
+                    font-weight:700;
+                    margin-top:-8px;
+                    margin-bottom:8px;'>
+            Rs {invest_amount:,}
+        </div>
+        """,
+        unsafe_allow_html=True
+    )
 
     duration = st.slider("Duration (Years)", 1, 20, 5)
-    target_return = st.slider("Target Annual Return %", 5, 50, 20)
-    risk_appetite = st.radio("Risk Appetite", ["Low", "Medium", "High"], horizontal=True, index=1)
+
+    target_return = st.slider(
+        "Target Annual Return %",
+        5, 50, 20
+    )
+
+    risk_appetite = st.radio(
+        "Risk Appetite",
+        ["Low", "Medium", "High"],
+        horizontal=True,
+        index=1
+    )
 
     preferred = st.multiselect(
         "Preferred Sectors",
         options=ALL_SECTORS,
-        default=["Banking", "Energy"],
+        default=["Banking", "Energy"]
     )
 
     excluded = st.multiselect(
         "Excluded Sectors",
         options=[sec for sec in ALL_SECTORS if sec not in preferred],
-        default=[],
+        default=[]
     )
 
-    portfolio_size = st.select_slider("Portfolio Size", options=[3, 5, 7, 10], value=5)
-    algorithm = st.radio("Algorithm", ["Hill Climbing", "Sim. Annealing", "Both"], horizontal=True)
+    portfolio_size = st.select_slider(
+        "Portfolio Size",
+        options=[3, 5, 7, 10],
+        value=5
+    )
+
+    algorithm = st.radio(
+        "Algorithm",
+        ["Hill Climbing", "Sim. Annealing", "Both"],
+        horizontal=True
+    )
 
     st.divider()
-    run = st.button("Run Analysis", use_container_width=True)
+
+    run = st.button(
+        "Run Analysis",
+        use_container_width=True
+    )
 
 # ─────────────────────────────────────────────
 #  TITLE BAR
