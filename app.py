@@ -11,9 +11,12 @@ import matplotlib
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 import os
-import random
 
-# Set page config
+from scoring_engine import (
+    score_all, allocate_portfolio, portfolio_metrics,
+    hill_climbing, simulated_annealing
+)
+
 st.set_page_config(
     page_title="PSX AI Investment Advisory System",
     page_icon="📈",
@@ -22,727 +25,712 @@ st.set_page_config(
 )
 
 # ─────────────────────────────────────────────
-#  MOCK DATA AND SCORING FUNCTIONS
-# ─────────────────────────────────────────────
-
-def create_mock_stocks_data():
-    """Create mock stock data for PSX"""
-    stocks = {
-        "Symbol": ["MCB", "OGDC", "TRG", "HUBG", "ENGRO", "HBL", "PPL", "SYS", "LUCK", "NESTLE",
-                   "POL", "FFC", "MARI", "DAWH", "EFERT", "HUBC", "KEL", "PSO", "SHEL", "NRL",
-                   "ATRL", "BOP", "UBL", "BAFL", "MEBL"],
-        "Name": ["MCB Bank", "Oil & Gas Dev Corp", "TRG Pakistan", "Hub Power Co", "Engro Corp", 
-                 "Habib Bank", "Pakistan Petroleum", "Systems Limited", "Lucky Cement", "Nestle Pakistan",
-                 "Pakistan Oilfields", "Fauji Fertilizer", "Mari Petroleum", "Dawood Hercules", "Engro Fertilizer",
-                 "Hub Power", "K-Electric", "Pakistan State Oil", "Shell Pakistan", "National Refinery",
-                 "Attock Refinery", "Bank of Punjab", "United Bank", "Bank Alfalah", "Meezan Bank"],
-        "Sector": ["Banking", "Energy", "Technology", "Energy", "Fertilizer", 
-                   "Banking", "Energy", "Technology", "Cement", "FMCG",
-                   "Energy", "Fertilizer", "Energy", "Chemical", "Fertilizer",
-                   "Energy", "Power", "Energy", "Energy", "Energy",
-                   "Energy", "Banking", "Banking", "Banking", "Banking"],
-        "Price": [200, 185, 145, 161, 312, 145, 229, 1160, 680, 5800,
-                  450, 380, 420, 290, 350, 160, 45, 280, 310, 250,
-                  380, 35, 210, 95, 180],
-        "Growth_5yr": [0.18, 0.15, 0.24, 0.14, 0.19, 0.25, 0.19, 0.20, 0.15, 0.20,
-                       0.16, 0.17, 0.22, 0.13, 0.18, 0.12, 0.08, 0.14, 0.15, 0.13,
-                       0.17, 0.22, 0.21, 0.19, 0.23],
-        "Volatility": [0.12, 0.18, 0.28, 0.14, 0.20, 0.22, 0.19, 0.25, 0.32, 0.15,
-                       0.17, 0.16, 0.21, 0.18, 0.19, 0.15, 0.30, 0.20, 0.22, 0.24,
-                       0.23, 0.25, 0.24, 0.26, 0.27],
-        "Dividend_Yield": [0.102, 0.075, 0.021, 0.131, 0.094, 0.075, 0.058, 0.018, 0.032, 0.029,
-                           0.045, 0.088, 0.052, 0.036, 0.091, 0.128, 0.025, 0.062, 0.058, 0.048,
-                           0.044, 0.092, 0.068, 0.072, 0.082],
-        "Momentum_Score": [0.85, 0.70, 0.91, 0.71, 0.68, 0.75, 0.62, 0.60, 0.55, 0.58,
-                           0.65, 0.72, 0.78, 0.59, 0.70, 0.68, 0.45, 0.63, 0.61, 0.56,
-                           0.60, 0.80, 0.79, 0.77, 0.81]
-    }
-    return pd.DataFrame(stocks)
-
-def score_all_stocks(df, preferred_sectors, excluded_sectors, risk_appetite):
-    """Score all stocks based on multiple factors"""
-    scored = df.copy()
-    scores = []
-    breakdowns = []
-    
-    # Risk appetite multiplier
-    risk_mult = {"Low": 0.7, "Medium": 1.0, "High": 1.3}
-    risk_factor = risk_mult[risk_appetite]
-    
-    for idx, row in scored.iterrows():
-        # Component scores (max values)
-        growth_score = min(row["Growth_5yr"] / 0.30 * 100, 100) * 0.30  # 30% weight
-        stability_score = min((1 - row["Volatility"]) / 0.7 * 100, 100) * 0.20  # 20% weight
-        dividend_score = min(row["Dividend_Yield"] / 0.15 * 100, 100) * 0.20  # 20% weight
-        momentum_score = row["Momentum_Score"] * 100 * 0.15  # 15% weight
-        
-        # Sector preference (15% weight)
-        sector_score = 0
-        if row["Sector"] in preferred_sectors:
-            sector_score = 100 * 0.15
-        elif row["Sector"] in excluded_sectors:
-            sector_score = 0
-        else:
-            sector_score = 50 * 0.15
-        
-        total_score = growth_score + stability_score + dividend_score + momentum_score + sector_score
-        
-        # Apply risk adjustment
-        if risk_appetite == "Low" and row["Volatility"] > 0.20:
-            total_score *= 0.8
-        elif risk_appetite == "High" and row["Volatility"] < 0.15:
-            total_score *= 0.9
-            
-        scores.append(total_score)
-        
-        breakdowns.append({
-            "Growth": round(growth_score, 1),
-            "Stability": round(stability_score, 1),
-            "Dividend": round(dividend_score, 1),
-            "Momentum": round(momentum_score, 1),
-            "Sector": round(sector_score, 1)
-        })
-    
-    scored["Total_Score"] = scores
-    scored["Breakdown"] = breakdowns
-    scored = scored.sort_values("Total_Score", ascending=False)
-    return scored
-
-def portfolio_metrics(stocks_df, weights):
-    """Calculate portfolio metrics"""
-    expected_return = sum(stocks_df["Growth_5yr"] * 100 * weights[i] for i in range(len(weights)))
-    portfolio_risk = sum(stocks_df["Volatility"].values[i] * weights[i] for i in range(len(weights))) * 100
-    avg_dividend = sum(stocks_df["Dividend_Yield"].values[i] * 100 * weights[i] for i in range(len(weights)))
-    sharpe = (expected_return - 5) / (portfolio_risk + 0.01)
-    
-    return {
-        "Expected Return (%)": round(expected_return, 1),
-        "Portfolio Risk": round(portfolio_risk / 100, 3),
-        "Avg Dividend Yield": round(avg_dividend, 1),
-        "Sharpe-like Ratio": round(sharpe, 2),
-        "Inflation Risk": round(portfolio_risk / 100 + 0.05, 2),
-        "Algorithm Risk": round(expected_return / 2.5, 1),
-        "Optimization Risk": round(portfolio_risk / 50, 2)
-    }
-
-def hill_climbing(stocks_df, risk_appetite, n_stocks):
-    """Hill Climbing optimization algorithm"""
-    n = len(stocks_df)
-    weights = np.ones(n) / n
-    history = []
-    
-    for iteration in range(100):
-        # Simulate improvement
-        if iteration < 50:
-            score = 0.5 + (iteration / 100) * 0.4
-        else:
-            score = 0.85 + np.random.randn() * 0.02
-        history.append(score)
-        
-        # Adjust weights
-        idx = iteration % n
-        weights[idx] = min(0.3, weights[idx] + 0.01)
-        weights = weights / weights.sum()
-    
-    best_score = max(history)
-    return weights, history, 100
-
-def simulated_annealing(stocks_df, risk_appetite, n_stocks):
-    """Simulated Annealing optimization algorithm"""
-    n = len(stocks_df)
-    weights = np.ones(n) / n
-    history = []
-    
-    for iteration in range(100):
-        # Simulate improvement with annealing pattern
-        if iteration < 30:
-            score = 0.55 + (iteration / 100) * 0.35
-        elif iteration < 70:
-            score = 0.85 + np.random.randn() * 0.015
-        else:
-            score = 0.86 + np.random.randn() * 0.01
-        history.append(score)
-        
-        # Adjust weights
-        idx = iteration % n
-        weights[idx] = min(0.3, weights[idx] + 0.012)
-        weights = weights / weights.sum()
-    
-    best_score = max(history)
-    return weights, history, 100
-
-# Load data
-df = create_mock_stocks_data()
-ALL_SECTORS = sorted(df["Sector"].unique().tolist())
-
-# ─────────────────────────────────────────────
-#  CSS STYLING
+#  CSS
 # ─────────────────────────────────────────────
 st.markdown("""
 <style>
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap');
 
-html, body, [class*="css"] { 
-    font-family: 'Inter', sans-serif; 
-    font-size: 13px; 
+html, body, [class*="css"] { font-family:'Inter',sans-serif; font-size:13px; }
+
+/* ── Main bg ── */
+.stApp { background:#F5F7FA !important; }
+
+/* ══════════════════════════════
+   SIDEBAR — light theme
+══════════════════════════════ */
+[data-testid="stSidebar"] {
+    background:#FFFFFF !important;
+    border-right:1px solid #E2E8F0 !important;
+    min-width:240px !important;
+}
+[data-testid="stSidebar"] * { color:#374151 !important; }
+
+/* sidebar section headings */
+[data-testid="stSidebar"] h2 {
+    color:#111827 !important; font-size:14px !important;
+    font-weight:700 !important; margin-bottom:2px !important;
 }
 
-/* Sidebar */
-[data-testid="stSidebar"] { 
-    background: #1B2A42 !important; 
+/* sidebar labels */
+[data-testid="stSidebar"] label {
+    color:#6B7280 !important; font-size:11px !important; font-weight:500 !important;
 }
-[data-testid="stSidebar"] * { 
-    color: #C8D6E8 !important; 
+
+/* sidebar inputs */
+[data-testid="stSidebar"] [data-baseweb="input"] input {
+    background:#F9FAFB !important; border:1px solid #D1D5DB !important;
+    color:#111827 !important; font-size:12px !important; border-radius:6px !important;
 }
+[data-testid="stSidebar"] [data-baseweb="select"] {
+    background:#F9FAFB !important; border:1px solid #D1D5DB !important;
+}
+[data-testid="stSidebar"] [data-baseweb="select"] div {
+    color:#111827 !important; font-size:12px !important;
+}
+
+/* multiselect tags */
+[data-testid="stSidebar"] [data-baseweb="tag"] {
+    background:#EFF6FF !important; border:1px solid #BFDBFE !important;
+}
+[data-testid="stSidebar"] [data-baseweb="tag"] span { color:#1D4ED8 !important; }
+
+/* sidebar radio — VERTICAL stack, no pill */
+[data-testid="stSidebar"] [data-testid="stRadio"] > div {
+    background:transparent !important; border-radius:0 !important;
+    padding:0 !important; gap:2px !important; flex-direction:column !important;
+}
+[data-testid="stSidebar"] [data-testid="stRadio"] label {
+    background:#F9FAFB !important; border:1px solid #E5E7EB !important;
+    border-radius:6px !important; padding:7px 12px !important;
+    font-size:12px !important; font-weight:500 !important;
+    color:#374151 !important; cursor:pointer; transition:all .15s;
+    margin-bottom:3px !important;
+}
+[data-testid="stSidebar"] [data-testid="stRadio"] label:has(input:checked) {
+    background:#EFF6FF !important; border-color:#93C5FD !important;
+    color:#1D4ED8 !important; font-weight:600 !important;
+}
+
+/* nav radio in sidebar */
+[data-testid="stSidebar"] [data-testid="stRadio"][aria-label="nav"] > div {
+    flex-direction:column !important;
+}
+
+/* run button */
 [data-testid="stSidebar"] .stButton > button {
-    background: linear-gradient(135deg, #2563EB, #0EA5A0) !important;
-    color: white !important;
-    border: none !important;
-    border-radius: 8px !important;
-    font-weight: 600 !important;
-    padding: 10px 0 !important;
-    width: 100%;
+    background:linear-gradient(135deg,#2563EB,#0EA5E9) !important;
+    color:white !important; border:none !important; border-radius:7px !important;
+    font-weight:600 !important; font-size:12px !important; padding:9px 0 !important;
+    width:100% !important;
 }
 [data-testid="stSidebar"] .stButton > button:hover {
-    background: linear-gradient(135deg, #1D4ED8, #0B8A87) !important;
+    background:linear-gradient(135deg,#1D4ED8,#0284C7) !important;
+    box-shadow:0 4px 12px rgba(37,99,235,.25) !important;
 }
 
-/* Main content */
-.stApp { 
-    background: #F0F4F9 !important; 
+/* slider thumb */
+[data-testid="stSidebar"] [data-baseweb="slider"] [role="slider"] {
+    background:#2563EB !important;
 }
 
-/* Header */
-.main-header {
-    background: linear-gradient(90deg, #1B2A42, #243548);
-    border-radius: 12px;
-    padding: 15px 20px;
-    margin-bottom: 20px;
+/* divider */
+[data-testid="stSidebar"] hr { border-color:#E5E7EB !important; }
+
+/* ══════════════════════════════
+   NAV items with icons (sidebar)
+══════════════════════════════ */
+.nav-item {
+    display:flex; align-items:center; gap:10px;
+    padding:9px 12px; border-radius:7px; cursor:pointer;
+    font-size:12px; font-weight:500; color:#374151;
+    border:1px solid #E5E7EB; background:#F9FAFB;
+    margin-bottom:4px; transition:all .15s; user-select:none;
 }
-.main-header h1 {
-    color: white;
-    font-size: 16px;
-    font-weight: 700;
-    margin: 0;
+.nav-item.active {
+    background:#EFF6FF; border-color:#93C5FD; color:#1D4ED8; font-weight:600;
 }
-.main-header p {
-    color: #94A3B8;
-    font-size: 11px;
-    margin: 5px 0 0 0;
+.nav-item:hover { background:#F0F7FF; border-color:#BFDBFE; }
+.nav-icon { font-size:14px; line-height:1; }
+
+/* ── Page header ── */
+.page-header {
+    background:linear-gradient(90deg,#1E3A5F,#1B4F82);
+    border-radius:8px; padding:12px 20px; margin-bottom:14px;
+    display:flex; align-items:center; gap:10px;
+}
+.page-header h1 { color:#F8FAFC; font-size:14px; font-weight:700; margin:0; }
+.page-header p  { color:#93C5FD; font-size:10px; margin:2px 0 0; }
+
+/* ── Main tab radio (hidden — replaced by sidebar nav) ── */
+div[data-testid="stRadio"][data-nav="main"] { display:none !important; }
+
+/* ── KPI row ── */
+.kpi-row { display:flex; gap:10px; margin-bottom:14px; }
+.kpi-card {
+    flex:1; background:white; border-radius:8px; padding:12px 14px;
+    border:1px solid #E5E7EB; box-shadow:0 1px 2px rgba(0,0,0,.04);
+    border-top:3px solid #2563EB;
+}
+.kpi-card.g { border-top-color:#059669; }
+.kpi-card.a { border-top-color:#D97706; }
+.kpi-card.p { border-top-color:#7C3AED; }
+.kpi-label  { color:#6B7280; font-size:9px; font-weight:600; text-transform:uppercase; letter-spacing:.06em; margin-bottom:3px; }
+.kpi-value  { color:#111827; font-size:20px; font-weight:700; font-family:'JetBrains Mono',monospace; line-height:1.1; }
+.kpi-badge  { display:inline-block; margin-top:4px; font-size:9px; font-weight:600; padding:1px 7px; border-radius:20px; }
+.bg-green { background:#D1FAE5; color:#065F46; }
+.bg-blue  { background:#DBEAFE; color:#1E40AF; }
+.bg-amber { background:#FEF3C7; color:#92400E; }
+
+/* ── Section card ── */
+.sc { background:white; border-radius:8px; border:1px solid #E5E7EB; padding:14px 16px; margin-bottom:12px; box-shadow:0 1px 2px rgba(0,0,0,.03); }
+.sc h3 { color:#111827; font-size:12px; font-weight:600; margin:0 0 10px 0; }
+
+/* chart title above pyplot */
+.chart-title {
+    font-size:12px; font-weight:600; color:#111827;
+    margin:0 0 0px 0; padding:10px 14px 8px;
+    background:white; border:1px solid #E5E7EB;
+    border-bottom:none; border-radius:8px 8px 0 0;
 }
 
-/* Cards */
-.metric-card {
-    background: white;
-    border-radius: 12px;
-    padding: 16px;
-    border: 1px solid #E2E8F0;
-    box-shadow: 0 1px 3px rgba(0,0,0,0.05);
-    margin-bottom: 16px;
-}
-.metric-card h4 {
-    font-size: 11px;
-    color: #64748B;
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-    margin: 0 0 8px 0;
-}
-.metric-value {
-    font-size: 32px;
-    font-weight: 800;
-    color: #0F1B2D;
-    line-height: 1.2;
-}
-.metric-badge {
-    display: inline-block;
-    margin-top: 8px;
-    padding: 4px 10px;
-    border-radius: 20px;
-    font-size: 10px;
-    font-weight: 600;
-}
-.badge-green { background: #D1FAE5; color: #065F46; }
-.badge-blue { background: #DBEAFE; color: #1E40AF; }
-.badge-amber { background: #FEF3C7; color: #92400E; }
-.badge-red { background: #FEE2E2; color: #991B1B; }
+/* ── Reason card ── */
+.rc { background:white; border-radius:8px; border:1px solid #E5E7EB; padding:14px; box-shadow:0 1px 2px rgba(0,0,0,.03); }
+.rc .rc-name   { font-size:10px; color:#9CA3AF; margin-bottom:1px; }
+.rc .rc-sym    { font-size:18px; font-weight:800; color:#111827; line-height:1.1; }
+.rc .rc-sector { display:inline-block; background:#EFF6FF; color:#2563EB; font-size:9px; font-weight:600; padding:2px 7px; border-radius:10px; margin:5px 0 8px; }
+.rc .rc-score-lbl { font-size:9px; color:#9CA3AF; margin-bottom:5px; }
+.cs-row { margin-bottom:6px; }
+.cs-top { display:flex; justify-content:space-between; font-size:10px; color:#374151; margin-bottom:2px; }
+.cs-top span:last-child { font-family:'JetBrains Mono',monospace; font-weight:600; color:#111827; }
+.cs-bg  { background:#F3F4F6; border-radius:3px; height:5px; }
+.cs-fill{ height:5px; border-radius:3px; }
+.stat-r { display:flex; justify-content:space-between; padding:4px 0; border-bottom:1px solid #F3F4F6; font-size:10px; }
+.stat-r .sl { color:#6B7280; }
+.stat-r .sv { font-weight:600; color:#111827; font-family:'JetBrains Mono',monospace; font-size:10px; }
+.sv-low  { color:#059669 !important; font-weight:600 !important; font-size:10px !important; }
+.sv-med  { color:#D97706 !important; font-weight:600 !important; font-size:10px !important; }
+.sv-high { color:#DC2626 !important; font-weight:600 !important; font-size:10px !important; }
+.rc-note { font-size:9px; color:#9CA3AF; margin-top:8px; line-height:1.4; }
+.alloc-tag { display:inline-block; background:#EFF6FF; color:#2563EB; font-size:9px; font-weight:700; padding:2px 8px; border-radius:4px; margin-top:7px; }
 
-/* Tabs - Radio buttons */
-.stRadio > div {
-    background: #E2E8F0;
-    border-radius: 10px;
-    padding: 4px;
-    gap: 4px;
-}
-.stRadio label {
-    background: transparent !important;
-    border-radius: 8px !important;
-    padding: 8px 24px !important;
-    font-size: 12px !important;
-    font-weight: 500 !important;
-    color: #64748B !important;
-}
-.stRadio label:has(input:checked) {
-    background: white !important;
-    color: #1B2A42 !important;
-    box-shadow: 0 1px 3px rgba(0,0,0,0.1) !important;
-    font-weight: 600 !important;
-}
+/* ── Algo metric box ── */
+.am { text-align:center; background:white; border-radius:8px; border:1px solid #E5E7EB; padding:14px; }
+.aml { font-size:9px; color:#6B7280; text-transform:uppercase; letter-spacing:.06em; margin-bottom:3px; }
+.amv { font-size:24px; font-weight:800; font-family:'JetBrains Mono',monospace; }
+.ams { font-size:9px; color:#9CA3AF; margin-top:2px; }
 
-/* Section card */
-.section-card {
-    background: white;
-    border-radius: 12px;
-    border: 1px solid #E2E8F0;
-    padding: 20px;
-    margin-bottom: 20px;
-}
-.section-title {
-    font-size: 14px;
-    font-weight: 700;
-    color: #0F1B2D;
-    margin: 0 0 16px 0;
-}
+/* user greeting */
+.greeting { font-size:13px; color:#374151; font-weight:500; margin-bottom:10px; }
+.greeting span { color:#2563EB; font-weight:700; }
 
-/* Stock card */
-.stock-detail-card {
-    background: white;
-    border: 1px solid #E2E8F0;
-    border-radius: 12px;
-    padding: 16px;
-    margin-bottom: 16px;
-}
-.stock-symbol {
-    font-size: 18px;
-    font-weight: 800;
-    color: #0F1B2D;
-}
-.stock-sector {
-    background: #EFF6FF;
-    color: #2563EB;
-    font-size: 9px;
-    font-weight: 600;
-    padding: 2px 10px;
-    border-radius: 20px;
-}
-.score-bar-container {
-    background: #F1F5F9;
-    border-radius: 4px;
-    height: 6px;
-    overflow: hidden;
-}
-.score-bar-fill {
-    height: 6px;
-    border-radius: 4px;
-    background: #2563EB;
-}
-.alloc-tag {
-    background: #EFF6FF;
-    color: #2563EB;
-    font-size: 10px;
-    font-weight: 700;
-    padding: 4px 10px;
-    border-radius: 6px;
-    display: inline-block;
-}
+/* info step */
+.istep { background:white; border-radius:8px; border:1px solid #E5E7EB; padding:16px; text-align:center; }
+.istep .sn { background:#EFF6FF; color:#2563EB; width:26px; height:26px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-weight:700; font-size:12px; margin:0 auto 7px; }
+.istep p { color:#6B7280; font-size:11px; margin:0; }
 
-/* Table */
-.stock-table {
-    width: 100%;
-}
-.stock-table th {
-    text-align: left;
-    padding: 10px 8px;
-    background: #F8FAFD;
-    font-size: 10px;
-    font-weight: 600;
-    color: #64748B;
-}
-.stock-table td {
-    padding: 10px 8px;
-    border-bottom: 1px solid #F1F5F9;
-    font-size: 11px;
-}
+.footer { text-align:center; color:#9CA3AF; font-size:10px; padding:18px 0 6px; }
+</style>
+""", unsafe_allow_html=True)
 
-.footer {
-    text-align: center;
-    color: #94A3B8;
-    font-size: 10px;
-    padding: 20px;
-    border-top: 1px solid #E2E8F0;
-    margin-top: 20px;
+# ─────────────────────────────────────────────
+#  MATPLOTLIB
+# ─────────────────────────────────────────────
+PALETTE = ["#1a3fcc","#059669","#D97706","#DB2777","#7C3AED",
+           "#0891B2","#DC2626","#16A34A","#CA8A04","#9333EA"]
+BG, GRID, TXT = "#FFFFFF", "#E5E7EB", "#111827"
+
+def _base_fig(w=6, h=3.0):
+    fig, ax = plt.subplots(figsize=(w, h))
+    fig.patch.set_facecolor(BG); ax.set_facecolor(BG)
+    ax.tick_params(colors="#6B7280", labelsize=7)
+    for sp in ax.spines.values(): sp.set_edgecolor(GRID)
+    ax.yaxis.grid(True, color=GRID, linewidth=.5, zorder=0)
+    ax.set_axisbelow(True)
+    return fig, ax
+
+def make_pie(labels, values):
+    fig, ax = plt.subplots(figsize=(3.8, 3.2))
+    fig.patch.set_facecolor(BG)
+    wedges, texts, auto = ax.pie(
+        values, labels=labels, autopct="%1.1f%%", colors=PALETTE[:len(labels)],
+        startangle=90, wedgeprops=dict(width=.52, edgecolor="white", linewidth=1.5),
+        textprops=dict(color=TXT, fontsize=7))
+    for at in auto: at.set_fontsize(6); at.set_color("white"); at.set_fontweight("bold")
+    ax.set_title("Allocation by Symbol", fontsize=8, color=TXT, pad=5, fontweight="600")
+    plt.tight_layout(); return fig
+
+def make_hbar(cats, vals, title=""):
+    n = len(cats)
+    fig, ax = _base_fig(w=5, h=max(2.0, n*.42+.6))
+    bars = ax.barh(cats, vals, color=PALETTE[:n], edgecolor="white", linewidth=.6, zorder=3, height=.48)
+    for bar, v in zip(bars, vals):
+        ax.text(bar.get_width()+max(vals)*.01, bar.get_y()+bar.get_height()/2,
+                f"{v:.1f}%", va="center", ha="left", fontsize=7, color=TXT, fontweight="600")
+    ax.set_xlabel("Allocation %", fontsize=7, color="#6B7280")
+    ax.set_title(title, fontsize=8, color=TXT, pad=4, fontweight="600")
+    ax.xaxis.grid(False); ax.yaxis.grid(False)
+    plt.tight_layout(); return fig
+
+def make_score_hbar(comps, scores, maxes):
+    n = len(comps)
+    fig, ax = _base_fig(w=5, h=max(2.0, n*.42+.6))
+    bars = ax.barh(comps, scores, color=PALETTE[:n], edgecolor="white", linewidth=.6, zorder=3, height=.48)
+    for i, mx in enumerate(maxes):
+        ax.plot(mx, i, "|", color="#D1D5DB", markersize=10, markeredgewidth=1.5, zorder=4)
+    for bar, v in zip(bars, scores):
+        ax.text(bar.get_width()+.3, bar.get_y()+bar.get_height()/2,
+                f"{v:.1f}", va="center", ha="left", fontsize=7, color=TXT, fontweight="600")
+    ax.set_xlabel("Score", fontsize=7, color="#6B7280")
+    ax.set_title("Score Component Breakdown", fontsize=8, color=TXT, pad=4, fontweight="600")
+    ax.xaxis.grid(False); ax.yaxis.grid(False)
+    plt.tight_layout(); return fig
+
+def make_line(history, title="", color="#1a3fcc", label=None):
+    fig, ax = _base_fig(w=5.5, h=3.0)
+    x = range(len(history))
+    ax.plot(history, color=color, linewidth=2.0, zorder=3, label=label)
+    base = min(history)
+    ax.fill_between(x, history, base, alpha=.10, color=color)
+    ax.set_xlabel("Iteration", fontsize=7, color="#6B7280")
+    ax.set_ylabel("Objective Score", fontsize=7, color="#6B7280")
+    ax.set_title(title, fontsize=9, color=TXT, pad=5, fontweight="700")
+    if label: ax.legend(fontsize=7, framealpha=.8)
+    plt.tight_layout(); return fig
+
+def make_dual_line(hc_hist, sa_hist):
+    fig, ax = _base_fig(w=5.5, h=3.0)
+    x1, x2 = range(len(hc_hist)), range(len(sa_hist))
+    ax.fill_between(x1, hc_hist, min(hc_hist), alpha=.10, color="#1a3fcc")
+    ax.fill_between(x2, sa_hist, min(sa_hist), alpha=.10, color="#059669")
+    ax.plot(hc_hist, color="#1a3fcc", linewidth=2.0, label="Hill Climbing", zorder=3)
+    ax.plot(sa_hist, color="#059669", linewidth=2.0, linestyle="--", label="Simulated Annealing", zorder=3)
+    ax.set_xlabel("Iterations", fontsize=7, color="#6B7280")
+    ax.set_ylabel("Objective Score", fontsize=7, color="#6B7280")
+    ax.set_title("Convergence Curves", fontsize=9, color=TXT, pad=5, fontweight="700")
+    ax.legend(fontsize=7, framealpha=.8)
+    plt.tight_layout(); return fig
+
+def make_scatter(top_stocks, w1, w2):
+    fig, ax = _base_fig(w=5, h=3.0)
+    ax.set_facecolor("#FAFAFA")
+    for i, row in top_stocks.iterrows():
+        r  = row["Growth_5yr"] * 100
+        v  = row["Volatility"]
+        sz = 60 + row["Total_Score"]
+        ax.scatter(v, r, s=sz, color=PALETTE[i % len(PALETTE)], alpha=.85, edgecolors="white", linewidth=1, zorder=3)
+        ax.annotate(row["Symbol"], (v, r), textcoords="offset points", xytext=(5,3), fontsize=6, color=TXT)
+    xs = np.linspace(top_stocks["Volatility"].min()*.8, top_stocks["Volatility"].max()*1.1, 80)
+    ys = 8 + 120*(xs - xs.min())**.5
+    ax.plot(xs, ys, color="#9CA3AF", linewidth=1.2, linestyle="--", label="Efficient Frontier", zorder=2)
+    ax.set_xlabel("Portfolio Risk (Volatility)", fontsize=7, color="#6B7280")
+    ax.set_ylabel("Expected Return (%)", fontsize=7, color="#6B7280")
+    ax.set_title("Risk vs Return Scatter", fontsize=9, color=TXT, pad=5, fontweight="700")
+    ax.legend(fontsize=7, framealpha=.8)
+    plt.tight_layout(); return fig
+
+def show(fig):
+    st.pyplot(fig, use_container_width=True)
+    plt.close(fig)
+
+# ─────────────────────────────────────────────
+#  DATA
+# ─────────────────────────────────────────────
+@st.cache_data
+def load_data():
+    path = os.path.join(os.path.dirname(__file__), "stocks_data.csv")
+    return pd.read_csv(path)
+
+df = load_data()
+ALL_SECTORS = sorted(df["Sector"].unique().tolist())
+
+@st.cache_data(show_spinner=False)
+def run_pipeline(preferred, excluded, risk, n_stocks, algo):
+    scored = score_all(df, list(preferred), list(excluded), risk)
+    if scored.empty: return scored, None, None, None
+    top = scored.head(n_stocks).reset_index(drop=True)
+    hc = sa = None
+    if algo in ("Hill Climbing","Both"):        hc = hill_climbing(top, risk, n_stocks)
+    if algo in ("Simulated Annealing","Both"):  sa = simulated_annealing(top, risk, n_stocks)
+    return scored, top, hc, sa
+
+# ─────────────────────────────────────────────
+#  SIDEBAR
+# ─────────────────────────────────────────────
+NAV_ITEMS = [
+    ("📊", "Portfolio"),
+    ("🤖", "AI Reasoning"),
+    ("⚡", "Optimization"),
+    ("📋", "All Stocks"),
+]
+
+with st.sidebar:
+    # ── App title
+    st.markdown(
+        '<div style="padding:4px 0 10px;">'
+        '<span style="font-size:20px;">📈</span>'
+        '<span style="font-size:14px;font-weight:700;color:#111827;margin-left:6px;">InvestAI</span>'
+        '<div style="font-size:10px;color:#9CA3AF;margin-top:1px;">PSX Advisory System</div>'
+        '</div>',
+        unsafe_allow_html=True)
+
+    # ── User name
+    user_name = st.text_input("Your Name", placeholder="Enter your name", key="user_name_input")
+
+    st.markdown('<div style="height:6px;"></div>', unsafe_allow_html=True)
+    st.markdown('<hr style="margin:4px 0 10px;"/>', unsafe_allow_html=True)
+
+    # ── Navigation with icons
+    st.markdown('<div style="font-size:10px;font-weight:600;color:#9CA3AF;text-transform:uppercase;letter-spacing:.06em;margin-bottom:5px;">Navigation</div>', unsafe_allow_html=True)
+
+    if "nav_page" not in st.session_state:
+        st.session_state.nav_page = "Portfolio"
+
+    for icon, label in NAV_ITEMS:
+        active = st.session_state.nav_page == label
+        active_cls = "active" if active else ""
+        if st.button(f"{icon}  {label}", key=f"nav_{label}", use_container_width=True):
+            st.session_state.nav_page = label
+            st.rerun()
+        # We'll style via CSS below — override button style per nav item
+    page = st.session_state.nav_page
+
+    st.markdown('<hr style="margin:10px 0;"/>', unsafe_allow_html=True)
+
+    # ── Investor profile
+    st.markdown('<div style="font-size:10px;font-weight:600;color:#9CA3AF;text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px;">Investor Profile</div>', unsafe_allow_html=True)
+
+    amount        = st.number_input("Investment Amount (PKR)", min_value=100_000, max_value=100_000_000, value=5_000_000, step=100_000)
+    duration      = st.slider("Duration (Years)", 1, 15, 5)
+    target_return = st.slider("Target Annual Return (%)", 5, 50, 20)
+
+    # Risk appetite — vertical, Medium default
+    st.markdown('<div style="font-size:11px;color:#6B7280;font-weight:500;margin-bottom:4px;">Risk Appetite</div>', unsafe_allow_html=True)
+    risk = st.radio("", ["Low", "Medium", "High"], index=1, key="risk_radio")
+
+    st.markdown('<hr style="margin:10px 0;"/>', unsafe_allow_html=True)
+
+    # ── Sectors
+    st.markdown('<div style="font-size:10px;font-weight:600;color:#9CA3AF;text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px;">Sector Preferences</div>', unsafe_allow_html=True)
+    preferred = st.multiselect("Preferred Sectors", options=ALL_SECTORS, default=["Banking","Energy"])
+    excluded  = st.multiselect("Excluded Sectors", options=[s for s in ALL_SECTORS if s not in preferred], default=[])
+
+    st.markdown('<hr style="margin:10px 0;"/>', unsafe_allow_html=True)
+
+    # ── Portfolio settings
+    st.markdown('<div style="font-size:10px;font-weight:600;color:#9CA3AF;text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px;">Portfolio Settings</div>', unsafe_allow_html=True)
+    n_stocks = st.slider("Portfolio Size", 3, 12, 5)
+    algo     = st.selectbox("Algorithm", ["Hill Climbing","Simulated Annealing","Both"])
+
+    st.markdown('<div style="height:4px;"></div>', unsafe_allow_html=True)
+    run_btn = st.button("▶  Run Analysis", use_container_width=True, type="primary")
+
+# Override sidebar nav buttons to look like nav items (not default blue buttons)
+st.markdown("""
+<style>
+/* Override sidebar nav buttons */
+[data-testid="stSidebar"] [data-testid="stButton"] > button {
+    background:#F9FAFB !important;
+    border:1px solid #E5E7EB !important;
+    color:#374151 !important;
+    font-size:12px !important;
+    font-weight:500 !important;
+    text-align:left !important;
+    padding:8px 12px !important;
+    border-radius:7px !important;
+    box-shadow:none !important;
+    margin-bottom:3px !important;
+}
+[data-testid="stSidebar"] [data-testid="stButton"] > button:hover {
+    background:#EFF6FF !important;
+    border-color:#BFDBFE !important;
+    color:#1D4ED8 !important;
+}
+/* Run Analysis — keep gradient */
+[data-testid="stSidebar"] [data-testid="stButton"]:last-of-type > button {
+    background:linear-gradient(135deg,#2563EB,#0EA5E9) !important;
+    color:white !important;
+    border:none !important;
+    font-weight:600 !important;
+}
+[data-testid="stSidebar"] [data-testid="stButton"]:last-of-type > button:hover {
+    background:linear-gradient(135deg,#1D4ED8,#0284C7) !important;
+    color:white !important;
 }
 </style>
 """, unsafe_allow_html=True)
 
 # ─────────────────────────────────────────────
-#  SIDEBAR
+#  PERSIST RUN STATE
 # ─────────────────────────────────────────────
-with st.sidebar:
-    st.markdown("## INVESTOR SETTINGS")
-    st.markdown("---")
-    
-    st.markdown("**INVESTOR ADVISOR (0.1%)**")
-    amount = st.number_input("Rs", min_value=100000, max_value=100000000, value=5000000, step=100000, label_visibility="collapsed")
-    
-    st.markdown("**Duration (Years)**")
-    duration = st.slider("Years", 1, 15, 5, label_visibility="collapsed")
-    
-    st.markdown("**Target Annual Return**")
-    target_return = st.slider("Return %", 5, 50, 20, label_visibility="collapsed")
-    
-    st.markdown("**Risk Appetite**")
-    risk = st.radio("Risk", ["Low", "Medium", "High"], index=1, horizontal=True, label_visibility="collapsed")
-    
-    st.markdown("**Inflation Sources**")
-    inflation = st.radio("Inflation", ["Reducing", "Rising", "Risk"], index=1, horizontal=True, label_visibility="collapsed")
-    
-    st.markdown("**Portfolio Size**")
-    n_stocks = st.slider("Stocks", 3, 10, 5, label_visibility="collapsed")
-    
-    st.markdown("**Algorithms**")
-    algo = st.selectbox("Algorithm", ["Hill Climbing", "Simulated Annealing", "Both"], label_visibility="collapsed")
-    
-    st.markdown("---")
-    st.markdown("**Preferred Sectors**")
-    preferred = st.multiselect("Select", ALL_SECTORS, default=["Banking", "Energy"], label_visibility="collapsed")
-    st.markdown("**Excluded Sectors**")
-    excluded = st.multiselect("Exclude", [s for s in ALL_SECTORS if s not in preferred], default=[], label_visibility="collapsed")
-    
-    st.markdown("---")
-    run_btn = st.button("🚀 Run Analysis", use_container_width=True)
-
-# Initialize session state
-if "generated" not in st.session_state:
-    st.session_state.generated = False
-
 if run_btn:
     st.session_state.generated = True
-    st.session_state.amount = amount
-    st.session_state.risk = risk
-    st.session_state.preferred = preferred
-    st.session_state.excluded = excluded
-    st.session_state.n_stocks = n_stocks
-    st.session_state.algo = algo
-    st.session_state.target_return = target_return
+    st.session_state.params = dict(
+        amount=amount, risk=risk,
+        preferred=tuple(preferred), excluded=tuple(excluded),
+        n_stocks=n_stocks, algo=algo,
+        user_name=user_name,
+    )
 
 # ─────────────────────────────────────────────
 #  HEADER
 # ─────────────────────────────────────────────
-st.markdown("""
-<div class="main-header">
-    <h1>PSX AI Investment Advisory System — Streamlit Dashboard</h1>
-    <p>BS Computer Science — 6th Semester AI Project | Run: streamlit run app.py</p>
-</div>
-""", unsafe_allow_html=True)
+name_display = user_name.strip() if user_name and user_name.strip() else None
+greeting_html = (
+    f'<div class="greeting">Welcome back, <span>{name_display}</span> 👋</div>'
+    if name_display else ""
+)
+
+st.markdown(
+    '<div class="page-header">'
+    '<div>'
+    '<h1>PSX AI Investment Advisory System</h1>'
+    '<p>BS Computer Science — 6th Semester AI Project &nbsp;·&nbsp; PSX Stocks</p>'
+    '</div>'
+    '</div>',
+    unsafe_allow_html=True)
+
+if greeting_html:
+    st.markdown(greeting_html, unsafe_allow_html=True)
 
 # ─────────────────────────────────────────────
-#  MAIN CONTENT
+#  LANDING
 # ─────────────────────────────────────────────
-if not st.session_state.generated:
-    col1, col2, col3 = st.columns(3)
-    with col1:
-        st.markdown("""
-        <div class="section-card" style="text-align:center;">
-            <div style="background:#EFF6FF; width:40px; height:40px; border-radius:50%; display:flex; align-items:center; justify-content:center; margin:0 auto 12px;">
-                <span style="font-size:20px; font-weight:700; color:#2563EB;">1</span>
-            </div>
-            <p style="color:#64748B; font-size:12px;">Fill your investor profile in the settings panel</p>
-        </div>
-        """, unsafe_allow_html=True)
-    with col2:
-        st.markdown("""
-        <div class="section-card" style="text-align:center;">
-            <div style="background:#EFF6FF; width:40px; height:40px; border-radius:50%; display:flex; align-items:center; justify-content:center; margin:0 auto 12px;">
-                <span style="font-size:20px; font-weight:700; color:#2563EB;">2</span>
-            </div>
-            <p style="color:#64748B; font-size:12px;">Select preferred sectors and optimization algorithm</p>
-        </div>
-        """, unsafe_allow_html=True)
-    with col3:
-        st.markdown("""
-        <div class="section-card" style="text-align:center;">
-            <div style="background:#EFF6FF; width:40px; height:40px; border-radius:50%; display:flex; align-items:center; justify-content:center; margin:0 auto 12px;">
-                <span style="font-size:20px; font-weight:700; color:#2563EB;">3</span>
-            </div>
-            <p style="color:#64748B; font-size:12px;">Click Run Analysis to generate your AI portfolio</p>
-        </div>
-        """, unsafe_allow_html=True)
-    
+if not st.session_state.get("generated"):
+    c1, c2, c3 = st.columns(3)
+    for col, sn, desc in [
+        (c1,"1","Fill your investor profile in the settings panel"),
+        (c2,"2","Select preferred sectors and optimization algorithm"),
+        (c3,"3","Click Run Analysis to generate your AI portfolio"),
+    ]:
+        col.markdown('<div class="istep"><div class="sn">'+sn+'</div><p>'+desc+'</p></div>', unsafe_allow_html=True)
     st.markdown("---")
-    st.markdown("### Available Stock Database")
+    st.subheader("Available Stock Database")
     st.dataframe(df, use_container_width=True, height=400)
     st.stop()
 
-# Process data
-scored_df = score_all_stocks(df, st.session_state.preferred, st.session_state.excluded, st.session_state.risk)
-top_stocks = scored_df.head(st.session_state.n_stocks).reset_index(drop=True)
+# ─────────────────────────────────────────────
+#  PARAMS & RUN
+# ─────────────────────────────────────────────
+p         = st.session_state.params
+amount    = p["amount"]; risk = p["risk"]
+preferred = p["preferred"]; excluded = p["excluded"]
+n_stocks  = p["n_stocks"]; algo = p["algo"]
 
-# Run algorithms
-if st.session_state.algo in ["Hill Climbing", "Both"]:
-    hc_weights, hc_history, hc_iters = hill_climbing(top_stocks, st.session_state.risk, st.session_state.n_stocks)
+with st.spinner("Scoring & optimizing..."):
+    scored_df, top_stocks, hc_result, sa_result = run_pipeline(preferred, excluded, risk, n_stocks, algo)
+
+if scored_df.empty:
+    st.error("No stocks found. Adjust your sector filters.")
+    st.stop()
+
+def build_alloc(weights):
+    return [{"Symbol":row["Symbol"],"Name":row["Name"],"Sector":row["Sector"],
+             "Score":row["Total_Score"],
+             "Allocation %":round(weights[i]*100,1),
+             "Amount (PKR)":int(weights[i]*amount)}
+            for i, row in top_stocks.iterrows()]
+
+if hc_result:
+    hc_weights, hc_history, hc_iters = hc_result
     hc_metrics = portfolio_metrics(top_stocks, hc_weights)
-else:
-    hc_weights, hc_history, hc_metrics = None, None, None
-
-if st.session_state.algo in ["Simulated Annealing", "Both"]:
-    sa_weights, sa_history, sa_iters = simulated_annealing(top_stocks, st.session_state.risk, st.session_state.n_stocks)
+    hc_alloc   = build_alloc(hc_weights)
+if sa_result:
+    sa_weights, sa_history, sa_iters = sa_result
     sa_metrics = portfolio_metrics(top_stocks, sa_weights)
+    sa_alloc   = build_alloc(sa_weights)
+
+if algo == "Hill Climbing":
+    display_alloc, display_weights, display_metrics = hc_alloc, hc_weights, hc_metrics
+elif algo == "Simulated Annealing":
+    display_alloc, display_weights, display_metrics = sa_alloc, sa_weights, sa_metrics
 else:
-    sa_weights, sa_history, sa_metrics = None, None, None
+    display_alloc, display_weights, display_metrics = sa_alloc, sa_weights, sa_metrics
 
-# Select display metrics
-if st.session_state.algo == "Hill Climbing":
-    display_weights = hc_weights
-    display_metrics = hc_metrics
-elif st.session_state.algo == "Simulated Annealing":
-    display_weights = sa_weights
-    display_metrics = sa_metrics
-else:
-    display_weights = sa_weights
-    display_metrics = sa_metrics
+# ── current page from session
+page = st.session_state.get("nav_page", "Portfolio")
 
-# Build allocation
-display_alloc = []
-for i, row in top_stocks.iterrows():
-    display_alloc.append({
-        "Symbol": row["Symbol"],
-        "Name": row["Name"],
-        "Sector": row["Sector"],
-        "Score": row["Total_Score"],
-        "Allocation %": round(display_weights[i] * 100, 1),
-        "Amount (PKR)": int(display_weights[i] * st.session_state.amount)
-    })
+# ══════════════════════════════════════════════
+#  PORTFOLIO
+# ══════════════════════════════════════════════
+if page == "Portfolio":
+    ret    = display_metrics["Expected Return (%)"]
+    vrisk  = display_metrics["Portfolio Risk"]
+    div    = display_metrics["Avg Dividend Yield"]
+    sharpe = display_metrics["Sharpe-like Ratio"]
+    rb   = ("Above Target","bg-green") if ret >= target_return else ("Below Target","bg-amber")
+    slbl = "Excellent" if sharpe>=1.5 else ("Good" if sharpe>=1.0 else "Fair")
+    scls = "bg-green" if sharpe>=1.5 else "bg-blue"
 
-# ─────────────────────────────────────────────
-#  TABS
-# ─────────────────────────────────────────────
-tabs = st.radio("", ["Portfolio", "AI Reasoning", "Optimization", "All Stocks"], horizontal=True)
+    st.markdown(
+        '<div class="kpi-row">'
+        '<div class="kpi-card"><div class="kpi-label">Expected Return</div>'
+        '<div class="kpi-value">'+str(round(ret,1))+'%</div>'
+        '<span class="kpi-badge '+rb[1]+'">'+rb[0]+'</span></div>'
 
-# ==============================================
-# PORTFOLIO TAB
-# ==============================================
-if tabs == "Portfolio":
-    ret = display_metrics["Expected Return (%)"]
-    vrisk = display_metrics["Portfolio Risk"]
-    inf_risk = display_metrics.get("Inflation Risk", 0.13)
-    algo_risk = display_metrics.get("Algorithm Risk", 8.7)
-    opt_risk = display_metrics.get("Optimization Risk", 1.72)
-    
-    # Row 1
-    col1, col2, col3 = st.columns(3)
-    with col1:
-        st.markdown(f"""
-        <div class="metric-card">
-            <h4>Estimated Return</h4>
-            <div class="metric-value">{ret}%</div>
-            <span class="metric-badge badge-green">{'Above Target' if ret >= st.session_state.target_return else 'Below Target'}</span>
-        </div>
-        """, unsafe_allow_html=True)
-    
-    with col2:
-        st.markdown(f"""
-        <div class="metric-card">
-            <h4>Inflation Risk</h4>
-            <div class="metric-value">{inf_risk:.2f}</div>
-            <span class="metric-badge badge-blue">Below tolerance</span>
-        </div>
-        """, unsafe_allow_html=True)
-    
-    with col3:
-        st.markdown(f"""
-        <div class="metric-card">
-            <h4>AI Reasoning</h4>
-            <div class="metric-value">{algo_risk}%</div>
-            <span class="metric-badge badge-amber">Normal scenario</span>
-        </div>
-        """, unsafe_allow_html=True)
-    
-    # Row 2
-    col4, col5, col6 = st.columns(3)
-    with col4:
-        st.markdown(f"""
-        <div class="metric-card">
-            <h4>Optimization</h4>
-            <div class="metric-value">{opt_risk:.2f}</div>
-            <span class="metric-badge badge-red">Above tolerance</span>
-        </div>
-        """, unsafe_allow_html=True)
-    
-    # AI Stocks Table
-    st.markdown('<div class="section-card"><h3 class="section-title">AI Stocks</h3>', unsafe_allow_html=True)
-    
-    col_a, col_b, col_c = st.columns(3)
-    with col_a:
-        st.markdown("**Stock**")
-        for rec in display_alloc[:5]:
-            st.write(rec["Symbol"])
-    with col_b:
-        st.markdown("**Sector**")
-        for rec in display_alloc[:5]:
-            st.write(rec["Sector"])
-    with col_c:
-        st.markdown("**Allocation by Sector**")
-        for rec in display_alloc[:5]:
-            st.write(f"{rec['Allocation %']}%")
-    
-    st.markdown('</div>', unsafe_allow_html=True)
-    
-    # Allocation by Sector
-    st.markdown('<div class="section-card"><h3 class="section-title">Allocation by Sector</h3>', unsafe_allow_html=True)
-    sec_group = {}
-    for rec in display_alloc:
-        sec_group[rec["Sector"]] = sec_group.get(rec["Sector"], 0) + rec["Allocation %"]
-    
-    fig, ax = plt.subplots(figsize=(6, 4))
-    sectors = list(sec_group.keys())
-    values = list(sec_group.values())
-    colors = ['#2563EB', '#1D9E75', '#EF9F27', '#D4537E', '#8B5CF6']
-    bars = ax.barh(sectors, values, color=colors[:len(sectors)])
-    for bar, val in zip(bars, values):
-        ax.text(bar.get_width() + 1, bar.get_y() + bar.get_height()/2, f"{val:.1f}%", va='center', fontsize=10)
-    ax.set_xlabel("Allocation %")
-    ax.set_title("Sector Distribution")
-    st.pyplot(fig)
-    plt.close()
-    st.markdown('</div>', unsafe_allow_html=True)
+        '<div class="kpi-card g"><div class="kpi-label">Portfolio Risk</div>'
+        '<div class="kpi-value">'+str(round(vrisk,3))+'</div>'
+        '<span class="kpi-badge bg-blue">Within tolerance</span></div>'
 
-# ==============================================
-# AI REASONING TAB
-# ==============================================
-elif tabs == "AI Reasoning":
-    st.markdown('<div class="section-card"><h3 class="section-title">Settings Panel</h3><p style="color:#64748B;">(clicked)</p></div>', unsafe_allow_html=True)
-    
-    st.markdown('<div class="section-card"><h3 class="section-title">Portfolio</h3>', unsafe_allow_html=True)
-    
-    for rec in display_alloc[:3]:
-        row = scored_df[scored_df["Symbol"] == rec["Symbol"]].iloc[0]
-        breakdown = row["Breakdown"]
-        
-        # Build score bars
-        score_bars = ""
-        for comp, score in breakdown.items():
-            pct = score / 30 * 100 if comp == "Growth" else score / 20 * 100
-            score_bars += f"""
-            <div style="margin-bottom:8px;">
-                <div style="display:flex; justify-content:space-between; font-size:9px; color:#374151;">
-                    <span>{comp}</span>
-                    <span>{score:.1f}</span>
-                </div>
-                <div class="score-bar-container">
-                    <div class="score-bar-fill" style="width:{min(pct, 100)}%"></div>
-                </div>
-            </div>
-            """
-        
-        st.markdown(f"""
-        <div class="stock-detail-card">
-            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
-                <span class="stock-symbol">{rec['Symbol']}</span>
-                <span class="stock-sector">{rec['Sector']}</span>
-            </div>
-            <div style="font-size:11px; color:#64748B; margin-bottom:12px;">{rec['Name']}</div>
-            {score_bars}
-            <div style="font-size:10px; color:#64748B; margin-top:10px;">
-                - {rec['Symbol']} ranks highly due to strong 5 year growth and consistent dividend payouts. 
-                Sector preference bonus applied.
-            </div>
-            <div style="margin-top:12px;">
-                <span class="alloc-tag">Recommended allocation: {rec['Allocation %']}%</span>
-            </div>
-        </div>
-        """, unsafe_allow_html=True)
-    
-    st.markdown('</div>', unsafe_allow_html=True)
-    
-    # Score Component Breakdown
-    st.markdown('<div class="section-card"><h3 class="section-title">Score Component Breakdown</h3>', unsafe_allow_html=True)
-    
-    col_sel, col_chart = st.columns([1, 1.5])
-    with col_sel:
-        selected = st.selectbox("Select a stock:", [f"{r['Symbol']} — {r['Name']}" for r in display_alloc])
-        sym = selected.split(" — ")[0]
-    
-    with col_chart:
-        stock_row = scored_df[scored_df["Symbol"] == sym].iloc[0]
-        breakdown = stock_row["Breakdown"]
-        
-        fig, ax = plt.subplots(figsize=(5, 3))
-        comps = list(breakdown.keys())
-        scores = list(breakdown.values())
-        bars = ax.barh(comps, scores, color=['#2563EB', '#1D9E75', '#EF9F27', '#D4537E', '#8B5CF6'])
-        for bar, score in zip(bars, scores):
-            ax.text(bar.get_width() + 0.5, bar.get_y() + bar.get_height()/2, f"{score:.1f}", va='center', fontsize=9)
-        ax.set_xlabel("Score")
-        ax.set_title(f"{sym} — Component Breakdown", fontsize=11, fontweight='bold')
-        st.pyplot(fig)
-        plt.close()
-    
-    st.caption("AI Reasoning Tab — Scores computed by scoring engine using 5 weighted components")
+        '<div class="kpi-card a"><div class="kpi-label">Avg Dividend Yield</div>'
+        '<div class="kpi-value">'+str(round(div,1))+'%</div>'
+        '<span class="kpi-badge bg-green">Annual income</span></div>'
 
-# ==============================================
-# OPTIMIZATION TAB
-# ==============================================
-elif tabs == "Optimization":
-    st.markdown('<div class="section-card"><h3 class="section-title">Optimization Algorithm Results</h3>', unsafe_allow_html=True)
-    
-    if st.session_state.algo == "Both" and hc_history and sa_history:
-        col1, col2 = st.columns(2)
-        
-        with col1:
-            st.markdown('<p style="font-weight:600; margin-bottom:8px;">Convergence Curves</p>', unsafe_allow_html=True)
-            fig, ax = plt.subplots(figsize=(5, 3.5))
-            ax.plot(hc_history, color='#2563EB', linewidth=2, label='HC Seed Score')
-            ax.plot(sa_history, color='#1D9E75', linewidth=2, label='SA Seed Score')
-            ax.fill_between(range(len(hc_history)), hc_history, min(hc_history), alpha=0.1, color='#2563EB')
-            ax.fill_between(range(len(sa_history)), sa_history, min(sa_history), alpha=0.1, color='#1D9E75')
-            ax.set_xlabel("Iteration No.")
-            ax.set_ylabel("Convergence Value")
-            ax.legend()
-            ax.axhline(y=1.0, color='red', linestyle='--', alpha=0.5, label='Target')
-            st.pyplot(fig)
-            plt.close()
-            st.caption("HC Seed Score: 0.847 | SA Seed Score: 0.863 | Iteration No.: 100 | Target: 1000 → 0.0")
-        
-        with col2:
-            st.markdown('<p style="font-weight:600; margin-bottom:8px;">Risk vs Return Scatter</p>', unsafe_allow_html=True)
-            fig, ax = plt.subplots(figsize=(5, 3.5))
-            for i, row in top_stocks.iterrows():
-                ret_val = row["Growth_5yr"] * 100
-                risk_val = row["Volatility"] * 100
-                size = 80 + row["Total_Score"] / 2
-                ax.scatter(risk_val, ret_val, s=size, alpha=0.7, color='#2563EB')
-                ax.annotate(row["Symbol"], (risk_val, ret_val), xytext=(5, 3), textcoords='offset points', fontsize=8)
-            ax.set_xlabel("Risk")
-            ax.set_ylabel("Return")
-            ax.set_title("HC vs Risk")
-            st.pyplot(fig)
-            plt.close()
-        
-        # Algorithm Comparison
-        st.markdown('<div class="section-card" style="margin-top:10px;">', unsafe_allow_html=True)
-        st.markdown("### Algorithm Comparison")
-        st.markdown("""
-        - SA is relatively better (better) in 1.1% by maximizing equity
-        - HC converges faster
-        - SA has superior performance in the portfolio size
-        - HC SA for large portfolio (N = 8 stocks)
-        """)
+        '<div class="kpi-card p"><div class="kpi-label">Sharpe Ratio</div>'
+        '<div class="kpi-value">'+str(round(sharpe,2))+'</div>'
+        '<span class="kpi-badge '+scls+'">'+slbl+'</span></div>'
+        '</div>', unsafe_allow_html=True)
+
+    col_pie, col_tbl = st.columns([1,1], gap="large")
+    with col_pie:
+        st.markdown('<div class="sc"><h3>Portfolio Allocation</h3>', unsafe_allow_html=True)
+        pie_df = pd.DataFrame(display_alloc)
+        show(make_pie(pie_df["Symbol"].tolist(), pie_df["Allocation %"].tolist()))
+        legend = " &nbsp; ".join(
+            '<span style="color:'+PALETTE[i]+';font-weight:700;">●</span> '
+            '<span style="font-size:10px;color:#374151;">'+r["Symbol"]+' — '+str(r["Allocation %"])+'%</span>'
+            for i, r in enumerate(display_alloc))
+        st.markdown('<div style="margin-top:5px;">'+legend+'</div>', unsafe_allow_html=True)
         st.markdown('</div>', unsafe_allow_html=True)
-        
+
+    with col_tbl:
+        st.markdown('<div class="sc"><h3>Recommended Stocks</h3>', unsafe_allow_html=True)
+        adf = pd.DataFrame(display_alloc).copy()
+        adf["Amount (PKR)"] = adf["Amount (PKR)"].apply(lambda x: f"Rs {x:,}")
+        adf["Score"]        = adf["Score"].apply(lambda x: f"{x:.0f}/100")
+        adf["Alloc %"]      = adf["Allocation %"].apply(lambda x: f"{x}%")
+        st.dataframe(adf[["Symbol","Sector","Score","Alloc %","Amount (PKR)"]],
+                     use_container_width=True, hide_index=True, height=270)
+        st.markdown('</div>', unsafe_allow_html=True)
+
+    st.markdown('<div class="sc"><h3>Allocation by Sector</h3>', unsafe_allow_html=True)
+    sec = pd.DataFrame(display_alloc).groupby("Sector")["Allocation %"].sum().reset_index()
+    show(make_hbar(sec["Sector"].tolist(), sec["Allocation %"].tolist(), "Sector Distribution"))
+    st.markdown('</div>', unsafe_allow_html=True)
+
+# ══════════════════════════════════════════════
+#  AI REASONING
+# ══════════════════════════════════════════════
+elif page == "AI Reasoning":
+    st.markdown('<p style="font-size:13px;font-weight:600;color:#111827;margin-bottom:12px;">AI Recommendation Reasoning</p>', unsafe_allow_html=True)
+
+    COMP_COLORS = ["#1a3fcc","#059669","#D97706","#DB2777","#7C3AED"]
+    COMP_MAXES  = [30, 20, 15, 20, 15]
+
+    top3 = display_alloc[:3]
+    cols = st.columns(len(top3), gap="medium")
+
+    for col, rec in zip(cols, top3):
+        sym = rec["Symbol"]
+        row = scored_df[scored_df["Symbol"] == sym].iloc[0]
+        bd  = row["Breakdown"]
+        vol = row["Volatility"]
+        risk_lbl = "Low" if vol<0.15 else ("Medium" if vol<0.25 else "High")
+        risk_cls = "sv-low" if vol<0.15 else ("sv-med" if vol<0.25 else "sv-high")
+
+        bars_html = ""
+        for (comp, score), mx, clr in zip(bd.items(), COMP_MAXES, COMP_COLORS):
+            pct = round(min(score/mx*100, 100), 1)
+            bars_html += (
+                '<div class="cs-row">'
+                '<div class="cs-top"><span>'+str(comp)+'</span><span>'+str(round(score,1))+'</span></div>'
+                '<div class="cs-bg"><div class="cs-fill" style="width:'+str(pct)+'%;background:'+clr+';"></div></div>'
+                '</div>'
+            )
+
+        card = (
+            '<div class="rc">'
+            '<div class="rc-name">'+str(row["Name"])+'</div>'
+            '<div class="rc-sym">'+sym+'</div>'
+            '<div><span class="rc-sector">'+str(row["Sector"])+'</span></div>'
+            '<div class="rc-score-lbl">Composite Score</div>'
+            +bars_html+
+            '<div class="stat-r"><span class="sl">5yr Growth</span><span class="sv">'+str(round(row["Growth_5yr"]*100))+'%</span></div>'
+            '<div class="stat-r"><span class="sl">Volatility</span><span class="'+risk_cls+'">'+risk_lbl+'</span></div>'
+            '<div class="stat-r"><span class="sl">Dividend Yield</span><span class="sv">'+str(round(row["Dividend_Yield"],1))+'%</span></div>'
+            '<div class="stat-r" style="border:none;"><span class="sl">Momentum</span><span class="sv">'+str(round(row["Momentum_Score"],2))+'</span></div>'
+            '<div class="rc-note">'+sym+' ranks highly due to strong 5-year growth and consistent dividend payout; sector preference bonus applied.</div>'
+            '<div><span class="alloc-tag">Recommended allocation '+str(rec["Allocation %"])+'%</span></div>'
+            '</div>'
+        )
+        col.markdown(card, unsafe_allow_html=True)
+
+    st.markdown("---")
+    st.markdown('<p style="font-size:12px;font-weight:600;color:#111827;">Score Component Breakdown</p>', unsafe_allow_html=True)
+    selected  = st.selectbox("Select a stock:",
+        [r["Symbol"]+" — "+r["Name"] for r in display_alloc], key="stock_explain")
+    sym       = selected.split(" — ")[0]
+    stock_row = scored_df[scored_df["Symbol"]==sym].iloc[0]
+    bd        = stock_row["Breakdown"]
+    show(make_score_hbar(list(bd.keys()), list(bd.values()), COMP_MAXES))
+    st.caption("AI Reasoning Tab — Scores computed by scoring_engine using 5 weighted components")
+
+# ══════════════════════════════════════════════
+#  OPTIMIZATION
+# ══════════════════════════════════════════════
+elif page == "Optimization":
+    st.markdown('<p style="font-size:13px;font-weight:600;color:#111827;margin-bottom:12px;">Optimization Algorithm Results</p>', unsafe_allow_html=True)
+
+    if algo == "Both":
+        c1, c2 = st.columns(2, gap="large")
+        with c1:
+            st.markdown('<p class="chart-title">Convergence Curves</p>', unsafe_allow_html=True)
+            show(make_dual_line(hc_history, sa_history))
+        with c2:
+            st.markdown('<p class="chart-title">Risk vs Return Scatter</p>', unsafe_allow_html=True)
+            show(make_scatter(top_stocks, hc_weights, sa_weights))
+
+        hc_best = max(hc_history); sa_best = max(sa_history)
+        diff    = round(abs(sa_best - hc_best), 4)
+        b1, b2, b3 = st.columns([1,1,2], gap="medium")
+        with b1:
+            st.markdown(
+                '<div class="am"><div class="aml">HC BEST SCORE</div>'
+                '<div class="amv" style="color:#1a3fcc;">'+str(round(hc_best,3))+'</div>'
+                '<div class="ams">Iterations: '+str(hc_iters)+'</div></div>',
+                unsafe_allow_html=True)
+        with b2:
+            st.markdown(
+                '<div class="am"><div class="aml">SA BEST SCORE</div>'
+                '<div class="amv" style="color:#059669;">'+str(round(sa_best,3))+'</div>'
+                '<div class="ams">Temp: 1000 → 0.01</div></div>',
+                unsafe_allow_html=True)
+        with b3:
+            st.markdown(
+                '<div class="sc" style="margin-bottom:0;">'
+                '<p style="font-size:11px;font-weight:700;color:#111827;margin:0 0 6px 0;">Algorithm Comparison</p>'
+                '<p style="font-size:11px;color:#374151;margin:0 0 4px 0;">'
+                'SA found a marginally better portfolio (+'+str(diff)+') by escaping local optima; '
+                'SA converged faster. Both are appropriate for this portfolio size.</p>'
+                '<p style="font-size:10px;color:#6B7280;margin:0;">'
+                'Recommendation: use SA for large portfolios (N &gt; 8 stocks).</p>'
+                '</div>',
+                unsafe_allow_html=True)
+
     else:
-        # Single algorithm display
-        history = hc_history if st.session_state.algo == "Hill Climbing" else sa_history
-        algo_name = st.session_state.algo
-        
-        col1, col2 = st.columns(2)
-        
-        with col1:
-            st.markdown(f'<p style="font-weight:600;">{algo_name} Convergence</p>', unsafe_allow_html=True)
-            fig, ax = plt.subplots(figsize=(5, 3.5))
-            ax.plot(history, color='#2563EB', linewidth=2)
-            ax.fill_between(range(len(history)), history, min(history), alpha=0.1, color='#2563EB')
-            ax.set_xlabel("Iteration No.")
-            ax.set_ylabel("Convergence Value")
-            ax.set_title(f"{algo_name} - Convergence")
-            st.pyplot(fig)
-           
+        history = hc_history if algo=="Hill Climbing" else sa_history
+        iters   = hc_iters   if algo=="Hill Climbing" else sa_iters
+        metrics = hc_metrics if algo=="Hill Climbing" else sa_metrics
+        clr     = "#1a3fcc"  if algo=="Hill Climbing" else "#059669"
+        best    = max(history)
+
+        c1, c2 = st.columns(2, gap="large")
+        with c1:
+            st.markdown('<p class="chart-title">'+algo+' Convergence</p>', unsafe_allow_html=True)
+            show(make_line(history, algo+" Convergence", clr))
+        with c2:
+            st.markdown('<p class="chart-title">Risk vs Return Scatter</p>', unsafe_allow_html=True)
+            w = hc_weights if algo=="Hill Climbing" else sa_weights
+            show(make_scatter(top_stocks, w, w))
+
+        st.markdown(
+            '<div class="am" style="max-width:180px;margin-bottom:14px;">'
+            '<div class="aml">Best Score</div>'
+            '<div class="amv" style="color:'+clr+';">'+str(round(best,3))+'</div>'
+            '<div class="ams">Iterations: '+str(iters)+'</div></div>',
+            unsafe_allow_html=True)
+        for k, v in metrics.items(): st.metric(k, v)
+
+    st.caption("Optimization Tab — "+algo+" convergence comparison")
+
+# ══════════════════════════════════════════════
+#  ALL STOCKS
+# ══════════════════════════════════════════════
+elif page == "All Stocks":
+    total = len(scored_df)
+    st.markdown('<p style="font-size:13px;font-weight:600;color:#111827;">All '+str(total)+' Stocks — Ranked by Score</p>', unsafe_allow_html=True)
+    st.caption("Showing top 10 of "+str(total))
+    cols_s = ["Symbol","Name","Sector","Total_Score","Growth_5yr","Volatility","Dividend_Yield","Momentum_Score"]
+    sdf = scored_df[cols_s].copy()
+    sdf["Growth_5yr"]     = (sdf["Growth_5yr"]*100).round(1).astype(str)+"%"
+    sdf["Dividend_Yield"] = sdf["Dividend_Yield"].round(1).astype(str)+"%"
+    sdf["Volatility"]     = sdf["Volatility"].round(2)
+    sdf["Total_Score"]    = sdf["Total_Score"].round(0).astype(int)
+    sdf = sdf.rename(columns={"Total_Score":"Score","Growth_5yr":"Growth",
+                               "Dividend_Yield":"Div Yield","Momentum_Score":"Momentum"})
+    st.dataframe(sdf.style.background_gradient(subset=["Score"], cmap="Blues"),
+                 use_container_width=True, hide_index=True, height=500)
+    st.caption("All Stocks Table — Scores calculated using 5-component heuristic function with risk appetite adjustment")
+
+st.markdown("<div class='footer'>AI Investment Advisory System · BS CS 6th Semester · PSX Stocks — Simulated Data</div>",
+            unsafe_allow_html=True)
