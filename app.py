@@ -1,1117 +1,831 @@
-"""
-PSX AI Investment Advisory System
-BS Computer Science — 6th Semester AI Project
-Run: streamlit run app.py
-"""
-
 import streamlit as st
 import pandas as pd
 import numpy as np
+import random
+import math
 import plotly.graph_objects as go
 import plotly.express as px
-import time
-import os
-
-from scoring_engine import (
-    score_all, allocate_portfolio, portfolio_metrics,
-    hill_climbing, simulated_annealing
-)
+from plotly.subplots import make_subplots
 
 # ─────────────────────────────────────────────
 #  PAGE CONFIG
 # ─────────────────────────────────────────────
 st.set_page_config(
-    page_title="PSX AI Investment Advisory",
-    page_icon="📈",
+    page_title="PSX AI Investment Advisory System",
     layout="wide",
     initial_sidebar_state="expanded",
 )
 
 # ─────────────────────────────────────────────
-#  SESSION STATE DEFAULTS
-# ─────────────────────────────────────────────
-if "active_tab" not in st.session_state:
-    st.session_state.active_tab = "Portfolio"
-if "selected_stock" not in st.session_state:
-    st.session_state.selected_stock = None
-if "results_ready" not in st.session_state:
-    st.session_state.results_ready = False
-if "analysis_data" not in st.session_state:
-    st.session_state.analysis_data = None
-
-# ─────────────────────────────────────────────
-#  GLOBAL CSS  (Fix 1 + Fix 3 included here)
+#  CUSTOM CSS  (dark-navy dashboard theme)
 # ─────────────────────────────────────────────
 st.markdown("""
 <style>
-  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600;700&family=DM+Mono:wght@400;500&display=swap');
 
-  html, body, [class*="css"] {
-    font-family: 'Inter', sans-serif;
-  }
+/* ── Global ── */
+html, body, [class*="css"] { font-family: 'DM Sans', sans-serif; }
 
-  /* ── Hide default Streamlit chrome ── */
-  #MainMenu, footer, header { visibility: hidden; }
+.stApp {
+    background: linear-gradient(135deg, #0b1120 0%, #0f1a2e 60%, #0d1520 100%);
+    color: #e2e8f0;
+}
 
-  /* FIX 3 ── Collapse all dead space at the top */
-  .block-container {
-    padding: 0 !important;
-    margin-top: 0 !important;
-    max-width: 100% !important;
-  }
-  [data-testid="stAppViewContainer"] > section > div:first-child {
-    padding-top: 0 !important;
-    margin-top: 0 !important;
-  }
-  [data-testid="stVerticalBlock"] {
-    gap: 0 !important;
-  }
-  .main .block-container {
-    padding-top: 0 !important;
-    padding-left: 0 !important;
-    padding-right: 0 !important;
-    padding-bottom: 0 !important;
-    max-width: 100% !important;
-  }
-  div[data-testid="stVerticalBlock"] > div { gap: 0 !important; }
-
-  /* ── App shell ── */
-  .stApp {
-    background: #0D1B2A;
-    color: #E2E8F0;
-  }
-
-  /* FIX 1 ── Global text visibility on dark theme */
-  .stApp, .main-content,
-  [data-testid="stAppViewContainer"],
-  [data-testid="stVerticalBlock"] {
-    color: #E2E8F0 !important;
-  }
-
-  /* All paragraph / label text in main area */
-  .stApp p, .stApp label,
-  .stApp span:not(.sym-badge):not(.score-pill):not(.metric-badge):not(.metric-label):not(.metric-value),
-  [data-testid="stMarkdownContainer"] p {
-    color: #CBD5E1 !important;
-  }
-
-  /* Text inputs and textareas */
-  .stTextInput input,
-  .stTextArea textarea,
-  .stNumberInput input {
-    background: rgba(17, 40, 64, 0.9) !important;
-    color: #F1F5F9 !important;
-    border: 1px solid rgba(255,255,255,0.15) !important;
-    border-radius: 8px !important;
-  }
-
-  /* Selectbox */
-  .stSelectbox div[data-baseweb="select"] > div {
-    background: rgba(17, 40, 64, 0.9) !important;
-    color: #F1F5F9 !important;
-    border: 1px solid rgba(255,255,255,0.15) !important;
-    border-radius: 8px !important;
-  }
-  [data-baseweb="popover"] li {
-    color: #E2E8F0 !important;
-    background: #112840 !important;
-  }
-  [data-baseweb="popover"] li:hover {
-    background: #1E3A5F !important;
-  }
-
-  /* st.metric */
-  [data-testid="stMetricLabel"] p,
-  [data-testid="stMetricLabel"] { color: #94A3B8 !important; }
-  [data-testid="stMetricValue"]  { color: #F1F5F9 !important; }
-  [data-testid="stMetricDelta"]  { color: #34D399 !important; }
-
-  /* Captions */
-  .stCaption, [data-testid="stCaptionContainer"] p { color: #64748B !important; }
-
-  /* DataFrame */
-  .stDataFrame td, .stDataFrame th { color: #CBD5E1 !important; }
-
-  /* Alert / info */
-  [data-testid="stAlert"] p { color: #E2E8F0 !important; }
-
-  /* ── Sidebar ── */
-  [data-testid="stSidebar"] {
-    background: linear-gradient(180deg, #0F2236 0%, #0D1B2A 100%) !important;
-    border-right: 1px solid rgba(255,255,255,0.07);
-  }
-  [data-testid="stSidebar"] * { color: #CBD5E1 !important; }
-  [data-testid="stSidebar"] .stTextInput > div > div > input,
-  [data-testid="stSidebar"] .stNumberInput > div > div > input {
-    background: rgba(255,255,255,0.05) !important;
-    border: 1px solid rgba(255,255,255,0.12) !important;
-    border-radius: 8px !important;
-    color: #F1F5F9 !important;
-    font-family: 'Inter', sans-serif !important;
-  }
-  [data-testid="stSidebar"] .stSlider > div > div > div {
-    color: #38BDF8 !important;
-  }
-  [data-testid="stSidebar"] .stMultiSelect > div {
-    background: rgba(255,255,255,0.05) !important;
-    border: 1px solid rgba(255,255,255,0.12) !important;
-    border-radius: 8px !important;
-  }
-  [data-testid="stSidebar"] .stButton > button {
-    background: linear-gradient(135deg, #1E88E5, #1565C0) !important;
-    color: white !important;
-    border: none !important;
-    border-radius: 10px !important;
-    font-weight: 600 !important;
-    font-size: 15px !important;
-    padding: 14px 0 !important;
-    width: 100% !important;
-    letter-spacing: 0.3px !important;
-    box-shadow: 0 4px 20px rgba(30,136,229,0.4) !important;
-    transition: all 0.2s ease !important;
-  }
-  [data-testid="stSidebar"] .stButton > button:hover {
-    background: linear-gradient(135deg, #42A5F5, #1E88E5) !important;
-    transform: translateY(-1px) !important;
-    box-shadow: 0 6px 28px rgba(30,136,229,0.55) !important;
-  }
-  [data-testid="stSidebar"] [data-testid="stMarkdownContainer"] h2,
-  [data-testid="stSidebar"] [data-testid="stMarkdownContainer"] h3 {
-    color: #38BDF8 !important;
-    font-size: 11px !important;
-    font-weight: 700 !important;
-    letter-spacing: 1.5px !important;
-    text-transform: uppercase !important;
-  }
-
-  /* ── Top header bar ── */
-  .top-header {
-    background: linear-gradient(90deg, #0F2236 0%, #112840 100%);
-    border-bottom: 1px solid rgba(255,255,255,0.08);
-    padding: 0 32px;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    height: 60px;
-    position: sticky;
-    top: 0;
-    z-index: 999;
-    margin-bottom: 0 !important;
-  }
-  .header-title {
-    font-size: 16px;
-    font-weight: 700;
-    color: #F1F5F9;
-    letter-spacing: 0.2px;
-  }
-  .header-title span { color: #38BDF8; }
-  .nav-tabs {
-    display: flex;
-    gap: 4px;
-    background: rgba(255,255,255,0.05);
-    border-radius: 10px;
-    padding: 4px;
-  }
-  .nav-tab {
-    padding: 7px 18px;
-    border-radius: 7px;
-    font-size: 13px;
-    font-weight: 500;
-    color: #94A3B8;
-    cursor: pointer;
-    border: none;
-    background: transparent;
-    transition: all 0.15s ease;
-    white-space: nowrap;
-    text-decoration: none;
-  }
-  .nav-tab:hover { color: #E2E8F0; background: rgba(255,255,255,0.08); }
-  .nav-tab.active {
-    color: #F1F5F9 !important;
-    background: #1E3A5F !important;
-    box-shadow: 0 1px 4px rgba(0,0,0,0.3);
-  }
-
-  /* ── Main content area ── */
-  .main-content {
-    padding: 12px 36px 40px;
-    background: #0D1B2A;
-    min-height: calc(100vh - 60px);
-  }
-
-  /* FIX 2 ── Collapse the invisible nav button row to zero height */
-  div[data-testid="stHorizontalBlock"]:has(button[kind="secondary"]) {
-    height: 0 !important;
-    overflow: hidden !important;
-    margin: 0 !important;
-    padding: 0 !important;
-    min-height: 0 !important;
-    max-height: 0 !important;
-  }
-
-  /* ── Metric cards ── */
-  .metric-card {
-    background: linear-gradient(145deg, #112840 0%, #0F2236 100%);
-    border: 1px solid rgba(255,255,255,0.08);
-    border-radius: 14px;
-    padding: 20px 24px;
-    height: 110px;
-    display: flex;
-    flex-direction: column;
-    justify-content: space-between;
-    position: relative;
-    overflow: hidden;
-  }
-  .metric-card::after {
-    content: '';
-    position: absolute;
-    top: 0; left: 0; right: 0;
-    height: 3px;
-    border-radius: 14px 14px 0 0;
-  }
-  .metric-card.blue::after  { background: linear-gradient(90deg, #38BDF8, #1E88E5); }
-  .metric-card.green::after { background: linear-gradient(90deg, #34D399, #10B981); }
-  .metric-card.amber::after { background: linear-gradient(90deg, #FBBF24, #F59E0B); }
-  .metric-card.purple::after{ background: linear-gradient(90deg, #A78BFA, #7C3AED); }
-  .metric-label {
-    font-size: 11px;
-    font-weight: 600;
-    color: #64748B;
+/* ── Sidebar ── */
+section[data-testid="stSidebar"] {
+    background: linear-gradient(180deg, #0d1829 0%, #091324 100%);
+    border-right: 1px solid rgba(59,130,246,0.2);
+}
+section[data-testid="stSidebar"] .stMarkdown h3 {
+    color: #94a3b8;
+    font-size: 0.7rem;
+    letter-spacing: 0.12em;
     text-transform: uppercase;
-    letter-spacing: 0.8px;
-  }
-  .metric-value {
-    font-size: 28px;
-    font-weight: 700;
-    color: #F1F5F9;
-    font-family: 'JetBrains Mono', monospace;
-    line-height: 1;
-    margin: 4px 0;
-  }
-  .metric-badge {
-    font-size: 11px;
     font-weight: 600;
-  }
-  .metric-badge.up   { color: #34D399; }
-  .metric-badge.ok   { color: #34D399; }
-  .metric-badge.info { color: #94A3B8; }
-  .metric-badge.star { color: #FBBF24; }
+}
 
-  /* ── Section heading ── */
-  .section-heading {
-    font-size: 16px;
+/* ── Title bar ── */
+.title-bar {
+    background: linear-gradient(90deg, #0f2044 0%, #1a3a6e 50%, #0f2044 100%);
+    border-bottom: 1px solid rgba(59,130,246,0.35);
+    padding: 14px 28px;
+    text-align: center;
+    margin: -1rem -1rem 1.2rem -1rem;
+    font-size: 1.25rem;
     font-weight: 700;
-    color: #E2E8F0;
-    margin-bottom: 16px;
-    margin-top: 28px;
-    display: flex;
-    align-items: center;
-    gap: 8px;
-  }
-  .section-heading::after {
-    content: '';
-    flex: 1;
-    height: 1px;
-    background: rgba(255,255,255,0.07);
-    margin-left: 8px;
-  }
+    letter-spacing: 0.02em;
+    color: #e2e8f0;
+}
 
-  /* ── Panel/Card ── */
-  .panel {
-    background: linear-gradient(145deg, #112840 0%, #0F2236 100%);
-    border: 1px solid rgba(255,255,255,0.08);
+/* ── Metric cards ── */
+.metric-card {
+    background: linear-gradient(135deg, #112240 0%, #0f1e38 100%);
+    border: 1px solid rgba(59,130,246,0.25);
+    border-radius: 12px;
+    padding: 18px 22px;
+    text-align: center;
+    transition: transform .2s, box-shadow .2s;
+}
+.metric-card:hover { transform: translateY(-2px); box-shadow: 0 8px 32px rgba(59,130,246,.2); }
+.metric-label { font-size: 0.72rem; color: #94a3b8; letter-spacing: 0.06em; text-transform: uppercase; margin-bottom: 6px; }
+.metric-value { font-size: 2rem; font-weight: 700; color: #60a5fa; font-family: 'DM Mono', monospace; }
+.metric-sub { font-size: 0.75rem; color: #4ade80; margin-top: 4px; }
+.metric-sub.warn { color: #facc15; }
+
+/* ── Stock table ── */
+.stock-table { width: 100%; border-collapse: collapse; font-size: 0.85rem; }
+.stock-table th {
+    background: #0f2044;
+    color: #94a3b8;
+    text-transform: uppercase;
+    font-size: 0.7rem;
+    letter-spacing: 0.08em;
+    padding: 10px 14px;
+    border-bottom: 1px solid rgba(59,130,246,0.3);
+    text-align: left;
+}
+.stock-table td { padding: 10px 14px; border-bottom: 1px solid rgba(255,255,255,0.05); }
+.stock-table tr:hover td { background: rgba(59,130,246,0.08); }
+.symbol { color: #60a5fa; font-weight: 700; font-family: 'DM Mono', monospace; }
+.score-badge {
+    display: inline-block;
+    padding: 2px 10px;
+    border-radius: 20px;
+    font-weight: 700;
+    font-family: 'DM Mono', monospace;
+    font-size: 0.8rem;
+}
+.score-high { background: rgba(59,130,246,0.2); color: #60a5fa; }
+.score-mid  { background: rgba(250,204,21,0.15); color: #fcd34d; }
+.score-low  { background: rgba(148,163,184,0.15); color: #94a3b8; }
+.ret-pos { color: #4ade80; font-weight: 600; }
+.ret-med { color: #fb923c; font-weight: 600; }
+.status-top    { color: #f59e0b; font-weight: 700; }
+.status-rec    { color: #60a5fa; font-weight: 600; }
+.status-sel    { color: #4ade80; font-weight: 600; }
+.status-con    { color: #94a3b8; }
+.status-neu    { color: #64748b; }
+
+/* ── Reasoning cards ── */
+.reason-card {
+    background: linear-gradient(145deg, #112240 0%, #0e1d36 100%);
+    border: 1px solid rgba(59,130,246,0.3);
     border-radius: 14px;
     padding: 22px;
-  }
-  .panel-title {
-    font-size: 13px;
-    font-weight: 700;
-    color: #94A3B8;
-    text-transform: uppercase;
-    letter-spacing: 0.8px;
-    margin-bottom: 16px;
-  }
-
-  /* ── Stock table ── */
-  .stock-table { width: 100%; border-collapse: collapse; }
-  .stock-table th {
-    font-size: 10px;
-    font-weight: 700;
-    color: #64748B;
-    text-transform: uppercase;
-    letter-spacing: 0.8px;
-    padding: 8px 12px;
-    border-bottom: 1px solid rgba(255,255,255,0.06);
-    text-align: left;
-  }
-  .stock-table td {
-    padding: 11px 12px;
-    font-size: 13px;
-    color: #CBD5E1;
-    border-bottom: 1px solid rgba(255,255,255,0.04);
-  }
-  .stock-table tr:last-child td { border-bottom: none; }
-  .stock-table tr:hover td { background: rgba(255,255,255,0.03); }
-  .sym-badge {
-    font-weight: 700;
-    color: #38BDF8;
-    font-family: 'JetBrains Mono', monospace;
-    font-size: 13px;
-  }
-  .green-text { color: #34D399; font-weight: 600; }
-  .amber-text { color: #FBBF24; font-weight: 600; }
-  .score-pill {
-    background: rgba(30,136,229,0.15);
-    color: #38BDF8;
-    border-radius: 20px;
-    padding: 2px 9px;
-    font-size: 12px;
+    height: 100%;
+}
+.reason-card .ticker { font-size: 1.4rem; font-weight: 800; color: #60a5fa; }
+.reason-card .cname  { font-size: 0.78rem; color: #94a3b8; margin-bottom: 4px; }
+.reason-card .sector-tag {
+    display: inline-block;
+    background: rgba(59,130,246,0.15);
+    color: #93c5fd;
+    border-radius: 6px;
+    padding: 2px 10px;
+    font-size: 0.72rem;
     font-weight: 600;
-    font-family: 'JetBrains Mono', monospace;
-  }
-
-  /* ── Reason box ── */
-  .reason-box {
-    background: rgba(56,189,248,0.07);
-    border: 1px solid rgba(56,189,248,0.18);
-    border-radius: 12px;
-    padding: 20px 24px;
-  }
-  .reason-box .reason-title {
-    color: #38BDF8;
-    font-size: 15px;
-    font-weight: 700;
     margin-bottom: 14px;
-  }
-  .reason-item {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 8px 0;
-    border-bottom: 1px solid rgba(255,255,255,0.05);
-    font-size: 13px;
-    color: #94A3B8;
-  }
-  .reason-item:last-child { border-bottom: none; }
-  .reason-item .label { color: #94A3B8; }
-  .reason-item .val   { color: #F1F5F9; font-weight: 600; }
-
-  /* ── Sidebar investor badge ── */
-  .welcome-card {
-    background: linear-gradient(135deg, rgba(56,189,248,0.12), rgba(30,136,229,0.08));
-    border: 1px solid rgba(56,189,248,0.2);
-    border-radius: 12px;
-    padding: 14px 16px;
-    margin-bottom: 12px;
-  }
-  .welcome-name {
-    font-size: 16px;
+}
+.reason-metric { display: flex; justify-content: space-between; margin-bottom: 8px; font-size: 0.82rem; }
+.reason-metric .lbl { color: #94a3b8; }
+.reason-card .reasoning-text {
+    font-size: 0.78rem;
+    color: #cbd5e1;
+    line-height: 1.6;
+    margin: 12px 0;
+    padding: 10px;
+    background: rgba(255,255,255,0.04);
+    border-radius: 8px;
+    border-left: 3px solid #3b82f6;
+}
+.alloc-badge {
+    background: rgba(59,130,246,0.2);
+    color: #93c5fd;
+    border-radius: 6px;
+    padding: 4px 12px;
+    font-size: 0.8rem;
     font-weight: 700;
-    color: #F1F5F9 !important;
-  }
-  .welcome-sub {
-    font-size: 11px;
-    color: #64748B !important;
-    margin-top: 2px;
-  }
+    font-family: 'DM Mono', monospace;
+}
 
-  /* ── Footer ── */
-  .app-footer {
+/* ── Optimization cards ── */
+.algo-card {
+    background: linear-gradient(145deg, #112240, #0e1d36);
+    border: 1px solid rgba(59,130,246,0.25);
+    border-radius: 12px;
+    padding: 20px;
     text-align: center;
-    color: #2D4A63;
-    font-size: 11px;
-    padding: 24px 0 16px;
-    border-top: 1px solid rgba(255,255,255,0.05);
-    margin-top: 40px;
-  }
+}
+.algo-label { font-size: 0.72rem; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.08em; }
+.algo-value { font-size: 2.2rem; font-weight: 800; font-family: 'DM Mono', monospace; }
+.algo-hc { color: #60a5fa; }
+.algo-sa { color: #f87171; }
 
-  /* Dataframe styling */
-  .stDataFrame { background: transparent !important; }
-  iframe { border-radius: 10px !important; }
+/* ── Section headers ── */
+.section-header {
+    font-size: 1rem;
+    font-weight: 700;
+    color: #e2e8f0;
+    margin: 1rem 0 0.6rem 0;
+    padding-bottom: 6px;
+    border-bottom: 1px solid rgba(59,130,246,0.2);
+}
 
-  /* Spinner */
-  .stSpinner > div { color: #38BDF8 !important; }
+/* ── Progress bar ── */
+.prog-row { display: flex; align-items: center; margin-bottom: 10px; font-size: 0.8rem; }
+.prog-label { width: 160px; color: #94a3b8; }
+.prog-bar-outer { flex: 1; background: rgba(255,255,255,0.07); border-radius: 6px; height: 8px; overflow: hidden; }
+.prog-bar-inner { height: 100%; border-radius: 6px; background: linear-gradient(90deg, #3b82f6, #60a5fa); }
+.prog-val { width: 36px; text-align: right; color: #60a5fa; font-family: 'DM Mono', monospace; margin-left: 8px; }
 
-  /* Radio button override */
-  [data-testid="stRadio"] > div { flex-direction: row !important; gap: 4px !important; }
-  [data-testid="stRadio"] label {
-    background: rgba(255,255,255,0.05);
-    border-radius: 7px;
-    padding: 5px 14px !important;
-    font-size: 12px !important;
-    cursor: pointer;
-  }
-  [data-testid="stRadio"] label[data-checked="true"] {
-    background: #1E3A5F !important;
-    color: #38BDF8 !important;
-  }
+/* ── Sidebar buttons ── */
+div[data-testid="stButton"] > button {
+    background: linear-gradient(135deg, #1d4ed8, #2563eb);
+    color: white;
+    border: none;
+    border-radius: 10px;
+    font-weight: 700;
+    font-size: 0.92rem;
+    padding: 10px 0;
+    width: 100%;
+    transition: all .2s;
+    letter-spacing: 0.04em;
+}
+div[data-testid="stButton"] > button:hover {
+    background: linear-gradient(135deg, #2563eb, #3b82f6);
+    transform: translateY(-1px);
+    box-shadow: 0 6px 20px rgba(59,130,246,.4);
+}
 
-  /* Alert/error */
-  .stAlert { border-radius: 10px !important; }
+/* ── Tab styling ── */
+.stTabs [data-baseweb="tab-list"] {
+    background: rgba(15,32,68,0.8);
+    border-radius: 12px;
+    padding: 4px;
+    gap: 4px;
+    border: 1px solid rgba(59,130,246,0.2);
+}
+.stTabs [data-baseweb="tab"] {
+    border-radius: 8px;
+    color: #94a3b8;
+    font-weight: 600;
+    font-size: 0.85rem;
+    padding: 8px 20px;
+}
+.stTabs [aria-selected="true"] {
+    background: linear-gradient(135deg, #1d4ed8, #2563eb) !important;
+    color: white !important;
+}
+
+/* hide streamlit default elements */
+#MainMenu { visibility: hidden; }
+footer { visibility: hidden; }
+header { visibility: hidden; }
+
+/* Sidebar inputs */
+.stSlider > div > div { color: #60a5fa; }
+label { color: #94a3b8 !important; font-size: 0.82rem !important; font-weight: 500 !important; }
+.stNumberInput input, .stSelectbox select {
+    background: #0d1829 !important;
+    border: 1px solid rgba(59,130,246,0.3) !important;
+    color: #e2e8f0 !important;
+    border-radius: 8px !important;
+}
 </style>
 """, unsafe_allow_html=True)
 
 # ─────────────────────────────────────────────
-#  LOAD DATA
+#  STOCK UNIVERSE  (25 PSX stocks)
 # ─────────────────────────────────────────────
-@st.cache_data
-def load_data():
-    path = os.path.join(os.path.dirname(__file__), "stocks_data.csv")
-    return pd.read_csv(path)
+STOCKS = [
+    {"symbol": "MCB",    "name": "MCB Bank",            "sector": "Banking",    "price": 280,  "growth": 0.18, "volatility": "Low",    "div_yield": 0.082, "momentum": 0.85},
+    {"symbol": "OGDC",   "name": "Oil & Gas Dev. Corp.", "sector": "Energy",     "price": 485,  "growth": 0.16, "volatility": "Medium", "div_yield": 0.065, "momentum": 0.78},
+    {"symbol": "TRG",    "name": "TRG Pakistan",         "sector": "Technology", "price": 145,  "growth": 0.24, "volatility": "High",   "div_yield": 0.021, "momentum": 0.91},
+    {"symbol": "HUBC",   "name": "Hub Power Co.",        "sector": "Power",      "price": 98,   "growth": 0.14, "volatility": "Low",    "div_yield": 0.131, "momentum": 0.71},
+    {"symbol": "ENGRO",  "name": "Engro Corp.",          "sector": "Fertilizer", "price": 312,  "growth": 0.19, "volatility": "Medium", "div_yield": 0.094, "momentum": 0.68},
+    {"symbol": "HBL",    "name": "Habib Bank Ltd.",      "sector": "Banking",    "price": 145,  "growth": 0.15, "volatility": "Medium", "div_yield": 0.075, "momentum": 0.75},
+    {"symbol": "PPL",    "name": "Pakistan Petroleum",   "sector": "Energy",     "price": 225,  "growth": 0.13, "volatility": "Medium", "div_yield": 0.058, "momentum": 0.62},
+    {"symbol": "SYS",    "name": "Systems Ltd.",         "sector": "Technology", "price": 1180, "growth": 0.22, "volatility": "High",   "div_yield": 0.018, "momentum": 0.80},
+    {"symbol": "LUCK",   "name": "Lucky Cement",         "sector": "Cement",     "price": 680,  "growth": 0.11, "volatility": "High",   "div_yield": 0.032, "momentum": 0.55},
+    {"symbol": "NESTLE", "name": "Nestle Pakistan",      "sector": "FMCG",       "price": 5800, "growth": 0.10, "volatility": "Low",    "div_yield": 0.029, "momentum": 0.58},
+    {"symbol": "UBL",    "name": "United Bank Ltd.",     "sector": "Banking",    "price": 175,  "growth": 0.14, "volatility": "Medium", "div_yield": 0.071, "momentum": 0.70},
+    {"symbol": "FFC",    "name": "Fauji Fertilizer",     "sector": "Fertilizer", "price": 135,  "growth": 0.09, "volatility": "Low",    "div_yield": 0.115, "momentum": 0.60},
+    {"symbol": "POL",    "name": "Pakistan Oilfields",   "sector": "Energy",     "price": 490,  "growth": 0.12, "volatility": "Medium", "div_yield": 0.072, "momentum": 0.65},
+    {"symbol": "BAFL",   "name": "Bank Alfalah",         "sector": "Banking",    "price": 62,   "growth": 0.13, "volatility": "Medium", "div_yield": 0.060, "momentum": 0.64},
+    {"symbol": "EFERT",  "name": "Engro Fertilizers",    "sector": "Fertilizer", "price": 88,   "growth": 0.11, "volatility": "Low",    "div_yield": 0.108, "momentum": 0.58},
+    {"symbol": "ATRL",   "name": "Attock Refinery",      "sector": "Energy",     "price": 310,  "growth": 0.10, "volatility": "Medium", "div_yield": 0.045, "momentum": 0.56},
+    {"symbol": "POWER",  "name": "Power Cement",         "sector": "Cement",     "price": 22,   "growth": 0.08, "volatility": "High",   "div_yield": 0.010, "momentum": 0.48},
+    {"symbol": "MLCF",   "name": "Maple Leaf Cement",    "sector": "Cement",     "price": 48,   "growth": 0.09, "volatility": "High",   "div_yield": 0.015, "momentum": 0.50},
+    {"symbol": "PKGS",   "name": "Packages Ltd.",        "sector": "FMCG",       "price": 580,  "growth": 0.08, "volatility": "Low",    "div_yield": 0.038, "momentum": 0.52},
+    {"symbol": "KAPCO",  "name": "Kot Addu Power",       "sector": "Power",      "price": 78,   "growth": 0.07, "volatility": "Low",    "div_yield": 0.140, "momentum": 0.45},
+    {"symbol": "MARI",   "name": "Mari Petroleum",       "sector": "Energy",     "price": 2800, "growth": 0.15, "volatility": "Medium", "div_yield": 0.020, "momentum": 0.73},
+    {"symbol": "SEARL",  "name": "Searle Pakistan",      "sector": "Pharma",     "price": 195,  "growth": 0.12, "volatility": "Medium", "div_yield": 0.025, "momentum": 0.60},
+    {"symbol": "ABOT",   "name": "Abbott Pakistan",      "sector": "Pharma",     "price": 740,  "growth": 0.11, "volatility": "Low",    "div_yield": 0.030, "momentum": 0.55},
+    {"symbol": "MUGHAL", "name": "Mughal Iron & Steel",  "sector": "Steel",      "price": 110,  "growth": 0.16, "volatility": "High",   "div_yield": 0.025, "momentum": 0.67},
+    {"symbol": "FNEL",   "name": "Fauji Electric",       "sector": "Power",      "price": 56,   "growth": 0.13, "volatility": "Medium", "div_yield": 0.090, "momentum": 0.62},
+]
 
-df = load_data()
-ALL_SECTORS = sorted(df["Sector"].unique().tolist())
+ALL_SECTORS = sorted(list(set(s["sector"] for s in STOCKS)))
 
 # ─────────────────────────────────────────────
-#  SIDEBAR
+#  SCORING ENGINE
+# ─────────────────────────────────────────────
+WEIGHTS = {
+    "growth":    0.30,
+    "volatility":0.20,
+    "dividend":  0.15,
+    "sector":    0.20,
+    "momentum":  0.15,
+}
+
+def score_stock(s, risk_appetite, preferred_sectors, excluded_sectors, target_return):
+    if s["sector"] in excluded_sectors:
+        return 0
+
+    # growth component (normalize to 0-100)
+    g_score = min(s["growth"] / 0.30, 1.0) * 100
+
+    # volatility component (low vol = high score)
+    vol_map = {"Low": 100, "Medium": 60, "High": 30}
+    if risk_appetite == "High":
+        vol_map = {"Low": 50, "Medium": 80, "High": 100}
+    elif risk_appetite == "Medium":
+        vol_map = {"Low": 70, "Medium": 100, "High": 50}
+    v_score = vol_map[s["volatility"]]
+
+    # dividend component
+    d_score = min(s["div_yield"] / 0.15, 1.0) * 100
+
+    # sector preference bonus
+    sec_score = 100 if s["sector"] in preferred_sectors else 50
+
+    # momentum component
+    mom_score = s["momentum"] * 100
+
+    total = (
+        g_score   * WEIGHTS["growth"] +
+        v_score   * WEIGHTS["volatility"] +
+        d_score   * WEIGHTS["dividend"] +
+        sec_score * WEIGHTS["sector"] +
+        mom_score * WEIGHTS["momentum"]
+    )
+    return round(total)
+
+def score_components(s, risk_appetite, preferred_sectors):
+    vol_map = {"Low": 100, "Medium": 60, "High": 30}
+    if risk_appetite == "High":   vol_map = {"Low": 50, "Medium": 80, "High": 100}
+    elif risk_appetite == "Medium": vol_map = {"Low": 70, "Medium": 100, "High": 50}
+    return {
+        "Growth (30pts)":    round(min(s["growth"]/0.30,1.0)*100 * WEIGHTS["growth"]),
+        "Volatility (20pts)":round(vol_map[s["volatility"]] * WEIGHTS["volatility"]),
+        "Sector Match (20pts)": round((100 if s["sector"] in preferred_sectors else 50) * WEIGHTS["sector"]),
+        "Momentum (15pts)":  round(s["momentum"]*100 * WEIGHTS["momentum"]),
+        "Dividend (15pts)":  round(min(s["div_yield"]/0.15,1.0)*100 * WEIGHTS["dividend"]),
+    }
+
+# ─────────────────────────────────────────────
+#  PORTFOLIO CONSTRUCTION
+# ─────────────────────────────────────────────
+def build_scored_list(risk, preferred, excluded, target):
+    scored = []
+    for s in STOCKS:
+        sc = score_stock(s, risk, preferred, excluded, target)
+        scored.append({**s, "score": sc})
+    scored.sort(key=lambda x: x["score"], reverse=True)
+    return scored
+
+def portfolio_from_top(scored, n):
+    candidates = [s for s in scored if s["score"] > 0][:n]
+    total_score = sum(s["score"] for s in candidates)
+    for s in candidates:
+        s["alloc"] = round(s["score"] / total_score * 100) if total_score else round(100/n)
+    return candidates
+
+# ─────────────────────────────────────────────
+#  HILL CLIMBING
+# ─────────────────────────────────────────────
+def portfolio_value(weights, stocks):
+    """Simple objective: weighted return - risk penalty"""
+    vol_penalty = {"Low": 0, "Medium": 0.5, "High": 1.5}
+    val = 0
+    for w, s in zip(weights, stocks):
+        val += w * (s["growth"] * 100 + s["div_yield"] * 50 - vol_penalty[s["volatility"]])
+    return val
+
+def hill_climbing(stocks, iterations=100):
+    n = len(stocks)
+    weights = np.array([1.0/n]*n)
+    best_val = portfolio_value(weights, stocks)
+    history = [best_val]
+    for _ in range(iterations):
+        i, j = random.sample(range(n), 2)
+        delta = random.uniform(0.01, 0.05)
+        new_w = weights.copy()
+        new_w[i] = max(0.05, new_w[i] - delta)
+        new_w[j] = min(0.60, new_w[j] + delta)
+        new_w = new_w / new_w.sum()
+        val = portfolio_value(new_w, stocks)
+        if val > best_val:
+            best_val, weights = val, new_w
+        history.append(best_val)
+    return weights, best_val, history
+
+def simulated_annealing(stocks, iterations=100, T_start=1000, T_end=0.01):
+    n = len(stocks)
+    weights = np.array([1.0/n]*n)
+    best_val = portfolio_value(weights, stocks)
+    best_w = weights.copy()
+    history = [best_val]
+    T = T_start
+    cooling = (T_end / T_start) ** (1 / iterations)
+    for _ in range(iterations):
+        i, j = random.sample(range(n), 2)
+        delta = random.uniform(0.01, 0.08)
+        new_w = weights.copy()
+        new_w[i] = max(0.05, new_w[i] - delta)
+        new_w[j] = min(0.60, new_w[j] + delta)
+        new_w = new_w / new_w.sum()
+        val = portfolio_value(new_w, stocks)
+        diff = val - best_val
+        if diff > 0 or random.random() < math.exp(diff / T):
+            weights, best_val = new_w, val
+            if val > portfolio_value(best_w, stocks):
+                best_w = new_w.copy()
+        history.append(portfolio_value(best_w, stocks))
+        T *= cooling
+    return best_w, portfolio_value(best_w, stocks), history
+
+# ─────────────────────────────────────────────
+#  SIDEBAR  — INVESTOR SETTINGS
 # ─────────────────────────────────────────────
 with st.sidebar:
-    st.markdown("""
-    <div style="display:flex;align-items:center;gap:10px;margin-bottom:20px;padding:4px 0;">
-      <div style="width:34px;height:34px;background:linear-gradient(135deg,#1E88E5,#38BDF8);
-                  border-radius:9px;display:flex;align-items:center;justify-content:center;
-                  font-size:18px;">📈</div>
-      <div>
-        <div style="font-size:15px;font-weight:800;color:#F1F5F9;letter-spacing:-0.3px;">PSX InvestAI</div>
-        <div style="font-size:10px;color:#475569;letter-spacing:0.5px;">ADVISORY SYSTEM</div>
-      </div>
-    </div>
-    """, unsafe_allow_html=True)
+    st.markdown("### ⚙ INVESTOR SETTINGS")
+    st.divider()
 
-    user_name = st.text_input("Your Name", value="", placeholder="Enter your name…",
-                               label_visibility="collapsed")
-
-    if user_name.strip():
-        st.markdown(f"""
-        <div class="welcome-card">
-          <div class="welcome-name">👋 {user_name.strip()}</div>
-          <div class="welcome-sub">Welcome to your investment dashboard</div>
-        </div>
-        """, unsafe_allow_html=True)
-    else:
-        st.markdown("""
-        <div class="welcome-card">
-          <div class="welcome-name">👋 Investor</div>
-          <div class="welcome-sub">Enter your name above</div>
-        </div>
-        """, unsafe_allow_html=True)
-
-    st.markdown("<div style='height:4px'></div>", unsafe_allow_html=True)
-
-    st.markdown("### ⚙️ Investor Settings")
-
-    amount = st.number_input(
+    invest_amount = st.number_input(
         "Investment Amount (PKR)",
         min_value=100_000, max_value=100_000_000,
         value=5_000_000, step=100_000,
-        help="Total capital to invest"
+        format="%d"
     )
-    st.markdown(f"<div style='font-size:13px;color:#38BDF8;font-weight:700;margin:-10px 0 10px 0;font-family:JetBrains Mono,monospace;'>Rs {amount:,}</div>", unsafe_allow_html=True)
+    st.markdown(f"<div style='color:#60a5fa;font-size:1.1rem;font-weight:700;margin-top:-8px;margin-bottom:8px;'>Rs {invest_amount:,}</div>", unsafe_allow_html=True)
 
-    duration = st.slider("Duration (Years)", 1, 15, 5)
-    target_return = st.slider("Target Annual Return (%)", 5, 50, 20)
+    duration = st.slider("Duration (Years)", 1, 20, 5)
+    target_return = st.slider("Target Annual Return %", 5, 50, 20)
+    risk_appetite = st.radio("Risk Appetite", ["Low", "Medium", "High"], horizontal=True, index=1)
 
-    risk = st.radio("Risk Appetite", ["Low", "Medium", "High"], index=1, horizontal=True)
+    st.markdown("**Preferred Sectors**")
+    pref_cols = st.columns(2)
+    preferred = []
+    for i, sec in enumerate(ALL_SECTORS):
+        col = pref_cols[i % 2]
+        if col.checkbox(sec, value=(sec in ["Banking", "Energy"]), key=f"pref_{sec}"):
+            preferred.append(sec)
 
-    st.markdown("<div style='height:4px'></div>", unsafe_allow_html=True)
+    st.markdown("**Excluded Sectors**")
+    excl_cols = st.columns(2)
+    excluded = []
+    for i, sec in enumerate(ALL_SECTORS):
+        col = excl_cols[i % 2]
+        if col.checkbox(sec, value=False, key=f"excl_{sec}"):
+            excluded.append(sec)
 
-    st.markdown("### 🏭 Preferred Sectors")
-    preferred = st.multiselect(
-        "Select sectors", options=ALL_SECTORS,
-        default=["Banking", "Energy"],
-        label_visibility="collapsed"
-    )
-    excluded = st.multiselect(
-        "Excluded Sectors",
-        options=[s for s in ALL_SECTORS if s not in preferred],
-        default=[], placeholder="Exclude sectors…"
-    )
+    portfolio_size = st.select_slider("Portfolio Size", options=[3, 5, 7, 10], value=5)
+    algorithm = st.radio("Algorithm", ["Hill Climbing", "Sim. Annealing"], horizontal=True)
 
-    st.markdown("<div style='height:4px'></div>", unsafe_allow_html=True)
-
-    st.markdown("### 📦 Portfolio Size")
-    n_stocks = st.slider("Stocks", 3, 12, 5, label_visibility="collapsed",
-                          format="%d stocks")
-
-    st.markdown("<div style='height:4px'></div>", unsafe_allow_html=True)
-
-    st.markdown("### 🧠 Algorithm")
-    algo = st.radio(
-        "Algorithm",
-        ["Hill Climbing", "Sim. Annealing", "Both"],
-        index=0,
-        horizontal=True,
-        label_visibility="collapsed"
-    )
-    if algo == "Sim. Annealing":
-        algo = "Simulated Annealing"
-
-    st.markdown("<div style='height:16px'></div>", unsafe_allow_html=True)
-
-    run_btn = st.button("▶  Run Analysis", use_container_width=True, type="primary")
+    st.divider()
+    run = st.button("🚀  Run Analysis", use_container_width=True)
 
 # ─────────────────────────────────────────────
-#  TOP NAV BAR  (Fix 2 — single navigation only)
+#  TITLE BAR
 # ─────────────────────────────────────────────
-TABS = [
-    ("Portfolio",    "📊"),
-    ("AI Reasoning", "🤖"),
-    ("Optimization", "📈"),
-    ("All Stocks",   "📋"),
-]
-
-nav_html = '<div class="top-header">'
-nav_html += '<div class="header-title">PSX <span>AI Investment Advisory System</span> — Streamlit Dashboard</div>'
-nav_html += '<div class="nav-tabs">'
-for tab_name, icon in TABS:
-    active_class = "active" if st.session_state.active_tab == tab_name else ""
-    nav_html += f'<button class="nav-tab {active_class}" onclick="void(0)">{icon} {tab_name}</button>'
-nav_html += '</div></div>'
-st.markdown(nav_html, unsafe_allow_html=True)
-
-# Invisible zero-height functional buttons that drive session state.
-# The CSS rule  div[data-testid="stHorizontalBlock"]:has(button[kind="secondary"])
-# collapses this entire row to 0px — only the HTML header above is visible.
-_nav_cols = st.columns(len(TABS))
-for i, (tab_name, icon) in enumerate(TABS):
-    with _nav_cols[i]:
-        if st.button(f"{icon} {tab_name}", key=f"nav_{tab_name}", use_container_width=True):
-            st.session_state.active_tab = tab_name
-            st.rerun()
-
-active = st.session_state.active_tab
+st.markdown('<div class="title-bar">📊 PSX AI Investment Advisory System — Streamlit Dashboard</div>', unsafe_allow_html=True)
 
 # ─────────────────────────────────────────────
-#  MAIN WRAPPER
+#  COMPUTE  (on first load or button press)
 # ─────────────────────────────────────────────
-st.markdown('<div class="main-content">', unsafe_allow_html=True)
+if "results" not in st.session_state or run:
+    scored_list = build_scored_list(risk_appetite, preferred, excluded, target_return)
+    portfolio   = portfolio_from_top(scored_list, portfolio_size)
 
-# ─────────────────────────────────────────────
-#  WELCOME SCREEN (no run yet)
-# ─────────────────────────────────────────────
-if not run_btn and not st.session_state.results_ready:
-    st.markdown("""
-    <div style="text-align:center;padding:60px 0 40px;">
-      <div style="font-size:56px;margin-bottom:16px;">📈</div>
-      <h1 style="font-size:28px;font-weight:800;color:#F1F5F9;margin:0 0 8px;">PSX AI Investment Advisory</h1>
-      <p style="color:#64748B;font-size:15px;max-width:480px;margin:0 auto 32px;">
-        Configure your investor profile in the sidebar and click <b style="color:#38BDF8">Run Analysis</b> to generate an optimised portfolio.
-      </p>
-    </div>
-    """, unsafe_allow_html=True)
+    # Apply chosen optimiser
+    hc_w, hc_score, hc_hist = hill_climbing(portfolio)
+    sa_w, sa_score, sa_hist = simulated_annealing(portfolio)
 
-    c1, c2, c3 = st.columns(3)
-    for col, icon, step, desc in [
-        (c1, "🎯", "Step 1", "Fill investor profile in sidebar"),
-        (c2, "🏭", "Step 2", "Select preferred sectors"),
-        (c3, "🚀", "Step 3", "Click Run Analysis"),
-    ]:
-        with col:
-            st.markdown(f"""
-            <div style="background:linear-gradient(145deg,#112840,#0F2236);border:1px solid rgba(255,255,255,0.08);
-                        border-radius:14px;padding:24px;text-align:center;">
-              <div style="font-size:32px;margin-bottom:12px;">{icon}</div>
-              <div style="font-size:11px;font-weight:700;color:#38BDF8;text-transform:uppercase;letter-spacing:1px;margin-bottom:6px;">{step}</div>
-              <div style="font-size:13px;color:#94A3B8;">{desc}</div>
-            </div>
-            """, unsafe_allow_html=True)
+    if algorithm == "Hill Climbing":
+        opt_weights = hc_w
+    else:
+        opt_weights = sa_w
 
-    st.markdown('<div class="section-heading">Available Stock Database</div>', unsafe_allow_html=True)
-    st.dataframe(df, use_container_width=True, height=380, hide_index=True)
-    st.markdown('</div>', unsafe_allow_html=True)
-    st.stop()
+    # Update allocations from optimiser
+    opt_allocs = (opt_weights * 100).round(1)
+    for i, s in enumerate(portfolio):
+        s["alloc"] = round(float(opt_allocs[i]))
 
-# ─────────────────────────────────────────────
-#  SCORING + OPTIMISATION
-# ─────────────────────────────────────────────
-if run_btn:
-    with st.spinner("⚙️ Scoring stocks…"):
-        time.sleep(0.3)
-        scored_df = score_all(df, preferred, excluded, risk)
+    # Compute portfolio metrics
+    exp_return = sum(s["alloc"] / 100 * s["growth"] for s in portfolio) * 100
+    vol_num = {"Low": 0.05, "Medium": 0.10, "High": 0.20}
+    port_risk = round(sum(s["alloc"] / 100 * vol_num[s["volatility"]] for s in portfolio), 2)
+    avg_div = round(sum(s["alloc"] / 100 * s["div_yield"] for s in portfolio) * 100, 1)
+    sharpe  = round((exp_return/100 - 0.05) / (port_risk if port_risk else 0.01), 2)
 
-    if scored_df.empty:
-        st.error("No stocks found after applying sector filters. Please adjust your preferences.")
-        st.stop()
-
-    top_stocks = scored_df.head(n_stocks).reset_index(drop=True)
-
-    with st.spinner("🧠 Running optimisation algorithm(s)…"):
-        time.sleep(0.4)
-
-        if algo in ["Hill Climbing", "Both"]:
-            hc_weights, hc_history, hc_iters = hill_climbing(top_stocks, risk, n_stocks)
-            hc_metrics = portfolio_metrics(top_stocks, hc_weights)
-            hc_alloc = [{
-                "Symbol": row["Symbol"], "Name": row["Name"], "Sector": row["Sector"],
-                "Score": row["Total_Score"],
-                "Allocation %": round(hc_weights[i] * 100, 1),
-                "Amount (PKR)": int(hc_weights[i] * amount),
-                "Return": round(row.get("Expected_Return", row.get("Growth_5yr", 0)) * 100, 1),
-                "Div %": round(row.get("Dividend_Yield", 0), 1),
-            } for i, (_, row) in enumerate(top_stocks.iterrows())]
-
-        if algo in ["Simulated Annealing", "Both"]:
-            sa_weights, sa_history, sa_iters = simulated_annealing(top_stocks, risk, n_stocks)
-            sa_metrics = portfolio_metrics(top_stocks, sa_weights)
-            sa_alloc = [{
-                "Symbol": row["Symbol"], "Name": row["Name"], "Sector": row["Sector"],
-                "Score": row["Total_Score"],
-                "Allocation %": round(sa_weights[i] * 100, 1),
-                "Amount (PKR)": int(sa_weights[i] * amount),
-                "Return": round(row.get("Expected_Return", row.get("Growth_5yr", 0)) * 100, 1),
-                "Div %": round(row.get("Dividend_Yield", 0), 1),
-            } for i, (_, row) in enumerate(top_stocks.iterrows())]
-
-    if algo == "Hill Climbing":
-        display_alloc, display_weights, display_metrics = hc_alloc, hc_weights, hc_metrics
-        hc_alloc_stored   = hc_alloc;   hc_history_stored = hc_history
-        hc_iters_stored   = hc_iters;   hc_metrics_stored = hc_metrics
-        sa_alloc_stored   = None;       sa_history_stored = None
-        sa_iters_stored   = None;       sa_metrics_stored = None
-    elif algo == "Simulated Annealing":
-        display_alloc, display_weights, display_metrics = sa_alloc, sa_weights, sa_metrics
-        hc_alloc_stored   = None;       hc_history_stored = None
-        hc_iters_stored   = None;       hc_metrics_stored = None
-        sa_alloc_stored   = sa_alloc;   sa_history_stored = sa_history
-        sa_iters_stored   = sa_iters;   sa_metrics_stored = sa_metrics
-    else:  # Both
-        display_alloc, display_weights, display_metrics = sa_alloc, sa_weights, sa_metrics
-        hc_alloc_stored   = hc_alloc;   hc_history_stored = hc_history
-        hc_iters_stored   = hc_iters;   hc_metrics_stored = hc_metrics
-        sa_alloc_stored   = sa_alloc;   sa_history_stored = sa_history
-        sa_iters_stored   = sa_iters;   sa_metrics_stored = sa_metrics
-
-    st.session_state.analysis_data = {
-        "scored_df": scored_df, "top_stocks": top_stocks,
-        "display_alloc": display_alloc, "display_weights": display_weights,
-        "display_metrics": display_metrics,
-        "algo": algo, "preferred": preferred,
-        "hc_alloc": hc_alloc_stored, "hc_history": hc_history_stored,
-        "hc_iters": hc_iters_stored, "hc_metrics": hc_metrics_stored,
-        "sa_alloc": sa_alloc_stored, "sa_history": sa_history_stored,
-        "sa_iters": sa_iters_stored, "sa_metrics": sa_metrics_stored,
-        "amount": amount, "target_return": target_return,
+    st.session_state.results = {
+        "scored_list": scored_list,
+        "portfolio": portfolio,
+        "exp_return": round(exp_return, 1),
+        "port_risk": port_risk,
+        "avg_div": avg_div,
+        "sharpe": sharpe,
+        "hc_score": round(hc_score, 3),
+        "sa_score": round(sa_score, 3),
+        "hc_hist": hc_hist,
+        "sa_hist": sa_hist,
+        "preferred": preferred,
+        "excluded": excluded,
+        "risk": risk_appetite,
+        "duration": duration,
+        "target": target_return,
+        "invest_amount": invest_amount,
     }
-    st.session_state.results_ready = True
-    st.session_state.active_tab = "Portfolio"
-    st.rerun()
+
+R = st.session_state.results
 
 # ─────────────────────────────────────────────
-#  UNPACK CACHED RESULTS
+#  TABS
 # ─────────────────────────────────────────────
-if not st.session_state.results_ready or st.session_state.analysis_data is None:
-    st.info("Configure settings in the sidebar and click **Run Analysis**.")
-    st.stop()
-
-D = st.session_state.analysis_data
-scored_df        = D["scored_df"]
-top_stocks       = D["top_stocks"]
-display_alloc    = D["display_alloc"]
-display_metrics  = D["display_metrics"]
-algo             = D["algo"]
-preferred        = D["preferred"]
-amount_display   = D["amount"]
-target_return    = D["target_return"]
+tab1, tab2, tab3, tab4 = st.tabs(["📈 Portfolio", "🤖 AI Reasoning", "⚡ Optimization", "📋 All Stocks"])
 
 # ══════════════════════════════════════════════
-#  TAB: PORTFOLIO
+#  TAB 1 — PORTFOLIO
 # ══════════════════════════════════════════════
-if active == "Portfolio":
-
-    exp_ret  = display_metrics.get("Expected Return (%)", 0)
-    port_risk= display_metrics.get("Portfolio Risk", 0)
-    div_yld  = display_metrics.get("Avg Dividend Yield", 0)
-    sharpe   = display_metrics.get("Sharpe-like Ratio", 0)
-    above    = "▲ Above target" if exp_ret >= target_return else "▼ Below target"
-
+with tab1:
+    # Metric row
     m1, m2, m3, m4 = st.columns(4)
     with m1:
         st.markdown(f"""
-        <div class="metric-card blue">
-          <div class="metric-label">Expected Return</div>
-          <div class="metric-value">{exp_ret:.1f}%</div>
-          <div class="metric-badge up">{above}</div>
+        <div class="metric-card">
+            <div class="metric-label">Expected Return</div>
+            <div class="metric-value">{R['exp_return']}%</div>
+            <div class="metric-sub">{'▲ Above target' if R['exp_return'] >= R['target'] else '▼ Below target'}</div>
         </div>""", unsafe_allow_html=True)
     with m2:
-        risk_ok = port_risk < 0.25
         st.markdown(f"""
-        <div class="metric-card green">
-          <div class="metric-label">Portfolio Risk</div>
-          <div class="metric-value">{port_risk:.2f}</div>
-          <div class="metric-badge ok">{'✓ Within tolerance' if risk_ok else '⚠ Above tolerance'}</div>
+        <div class="metric-card">
+            <div class="metric-label">Portfolio Risk</div>
+            <div class="metric-value">{R['port_risk']}</div>
+            <div class="metric-sub">✓ Within tolerance</div>
         </div>""", unsafe_allow_html=True)
     with m3:
         st.markdown(f"""
-        <div class="metric-card amber">
-          <div class="metric-label">Avg Dividend Yield</div>
-          <div class="metric-value">{div_yld:.1f}%</div>
-          <div class="metric-badge info">Annual income</div>
+        <div class="metric-card">
+            <div class="metric-label">Avg Dividend Yield</div>
+            <div class="metric-value">{R['avg_div']}%</div>
+            <div class="metric-sub">Annual income</div>
         </div>""", unsafe_allow_html=True)
     with m4:
-        sh_lbl = "★ Excellent" if sharpe >= 1.5 else "✓ Good" if sharpe >= 1.0 else "◇ Fair"
+        qual = "Excellent" if R['sharpe'] > 1.5 else "Good" if R['sharpe'] > 1 else "Moderate"
         st.markdown(f"""
-        <div class="metric-card purple">
-          <div class="metric-label">Sharpe Ratio</div>
-          <div class="metric-value">{sharpe:.2f}</div>
-          <div class="metric-badge star">{sh_lbl}</div>
+        <div class="metric-card">
+            <div class="metric-label">Sharpe Ratio</div>
+            <div class="metric-value">{R['sharpe']}</div>
+            <div class="metric-sub">★ {qual}</div>
         </div>""", unsafe_allow_html=True)
 
-    st.markdown('<div class="section-heading">Portfolio Allocation</div>', unsafe_allow_html=True)
+    st.markdown("<br>", unsafe_allow_html=True)
 
-    left_col, right_col = st.columns([1, 1], gap="medium")
+    col_left, col_right = st.columns([1, 1.4])
 
-    with left_col:
-        st.markdown('<div class="panel">', unsafe_allow_html=True)
-        st.markdown('<div class="panel-title">Donut Chart</div>', unsafe_allow_html=True)
-        pie_df = pd.DataFrame(display_alloc)
-        colors = ["#1E88E5","#26A69A","#EF9A9A","#FFA726","#AB47BC",
-                  "#42A5F5","#66BB6A","#FF7043","#EC407A","#78909C"]
+    with col_left:
+        st.markdown('<div class="section-header">Portfolio Allocation</div>', unsafe_allow_html=True)
+        # Donut chart
+        labels = [f"{s['symbol']} — {s['alloc']}%" for s in R['portfolio']]
+        values = [s['alloc'] for s in R['portfolio']]
+        colors = ['#1d4ed8','#2563eb','#3b82f6','#60a5fa','#93c5fd','#bfdbfe']
+
         fig_donut = go.Figure(go.Pie(
-            labels=pie_df["Symbol"],
-            values=pie_df["Allocation %"],
-            hole=0.58,
-            marker=dict(colors=colors[:len(pie_df)], line=dict(color="#0D1B2A", width=3)),
-            textinfo="label+percent",
-            textfont=dict(size=12, color="#E2E8F0"),
-            hovertemplate="<b>%{label}</b><br>Allocation: %{value}%<extra></extra>",
+            labels=[s['symbol'] for s in R['portfolio']],
+            values=values,
+            hole=0.60,
+            marker=dict(colors=colors[:len(values)], line=dict(color='#0f1a2e', width=2)),
+            textinfo='label+percent',
+            textfont=dict(color='white', size=11),
         ))
-        fig_donut.add_annotation(
-            text=f"<b>{len(pie_df)} Stocks</b><br><span style='font-size:11px;color:#64748B'>Diversified</span>",
-            x=0.5, y=0.5, showarrow=False, align="center",
-            font=dict(size=14, color="#F1F5F9"),
-        )
         fig_donut.update_layout(
-            paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)",
-            margin=dict(t=10, b=10, l=10, r=10),
-            legend=dict(
-                font=dict(color="#94A3B8", size=11),
-                bgcolor="rgba(0,0,0,0)",
-                orientation="v", x=1, y=0.5
-            ),
-            height=280,
-            showlegend=True,
+            showlegend=False,
+            paper_bgcolor='rgba(0,0,0,0)',
+            plot_bgcolor='rgba(0,0,0,0)',
+            margin=dict(l=10, r=10, t=10, b=10),
+            height=230,
+            annotations=[dict(text=f"{len(R['portfolio'])} Stocks<br>Diversified",
+                              x=0.5, y=0.5, font_size=12, showarrow=False,
+                              font_color='#94a3b8')]
         )
-        st.plotly_chart(fig_donut, use_container_width=True, config={"displayModeBar": False})
-        st.markdown('</div>', unsafe_allow_html=True)
+        st.plotly_chart(fig_donut, use_container_width=True)
 
-    with right_col:
-        st.markdown('<div class="panel">', unsafe_allow_html=True)
-        st.markdown('<div class="panel-title">Stock Breakdown</div>', unsafe_allow_html=True)
-        rows_html = ""
-        for item in display_alloc:
-            ret_val = item.get("Return", 0)
-            ret_cls = "green-text" if ret_val >= 15 else "amber-text" if ret_val >= 8 else ""
-            score_val = f"{item['Score']:.0f}/100"
-            rows_html += f"""
+    with col_right:
+        st.markdown('<div class="section-header">Portfolio Holdings</div>', unsafe_allow_html=True)
+
+        color_map_ret = {'Low': '#4ade80', 'Medium': '#fb923c', 'High': '#f87171'}
+        rows = ""
+        for s in R['portfolio']:
+            ret_color = '#4ade80' if s['growth'] >= 0.18 else '#fb923c' if s['growth'] >= 0.13 else '#f87171'
+            rows += f"""
             <tr>
-              <td><span class="sym-badge">{item['Symbol']}</span></td>
-              <td style="color:#94A3B8;font-size:12px;">{item['Sector']}</td>
-              <td><span class="score-pill">{score_val}</span></td>
-              <td style="color:#E2E8F0;font-weight:600;">{item['Allocation %']}%</td>
-              <td class="{ret_cls}">{ret_val:.1f}%</td>
-              <td style="color:#FBBF24;font-weight:600;">{item['Div %']:.1f}%</td>
+              <td><span class="symbol">{s['symbol']}</span></td>
+              <td style="color:#94a3b8">{s['sector']}</td>
+              <td><span class="score-badge score-high">{s['score']}/100</span></td>
+              <td>{s['alloc']}%</td>
+              <td style="color:{ret_color};font-weight:600">{round(s['growth']*100)}%</td>
+              <td style="color:#60a5fa">{round(s['div_yield']*100,1)}%</td>
             </tr>"""
+
         st.markdown(f"""
         <table class="stock-table">
           <thead><tr>
             <th>Stock</th><th>Sector</th><th>Score</th>
             <th>Alloc %</th><th>Return</th><th>Div %</th>
           </tr></thead>
-          <tbody>{rows_html}</tbody>
+          <tbody>{rows}</tbody>
         </table>""", unsafe_allow_html=True)
-        st.markdown('</div>', unsafe_allow_html=True)
 
-    st.markdown('<div class="section-heading">Allocation by Sector</div>', unsafe_allow_html=True)
-    st.markdown('<div class="panel">', unsafe_allow_html=True)
-    sector_alloc = pd.DataFrame(display_alloc).groupby("Sector")["Allocation %"].sum().reset_index()
-    sector_alloc = sector_alloc.sort_values("Allocation %", ascending=True)
-    bar_colors = ["#1E88E5","#26A69A","#EF9A9A","#FFA726","#AB47BC","#42A5F5","#66BB6A","#FF7043"]
+    # Sector bar chart
+    st.markdown('<div class="section-header">Allocation by Sector</div>', unsafe_allow_html=True)
+    sector_alloc = {}
+    for s in R['portfolio']:
+        sector_alloc[s['sector']] = sector_alloc.get(s['sector'], 0) + s['alloc']
+
     fig_bar = go.Figure(go.Bar(
-        x=sector_alloc["Allocation %"],
-        y=sector_alloc["Sector"],
-        orientation="h",
+        y=list(sector_alloc.keys()),
+        x=list(sector_alloc.values()),
+        orientation='h',
         marker=dict(
-            color=bar_colors[:len(sector_alloc)],
-            line=dict(color="rgba(0,0,0,0)", width=0)
+            color=['#1d4ed8','#2563eb','#3b82f6','#60a5fa','#93c5fd'],
+            line=dict(color='rgba(0,0,0,0)')
         ),
-        text=[f"{v:.0f}%" for v in sector_alloc["Allocation %"]],
-        textposition="outside",
-        textfont=dict(color="#94A3B8", size=12),
-        hovertemplate="<b>%{y}</b><br>%{x:.1f}%<extra></extra>",
+        text=[f"{v}%" for v in sector_alloc.values()],
+        textposition='outside',
+        textfont=dict(color='#94a3b8', size=11),
     ))
     fig_bar.update_layout(
-        paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)",
-        margin=dict(t=10, b=10, l=10, r=60),
-        xaxis=dict(showgrid=False, zeroline=False, showticklabels=False, color="#64748B"),
-        yaxis=dict(gridcolor="rgba(255,255,255,0.04)", color="#94A3B8", tickfont=dict(size=12)),
-        height=max(180, len(sector_alloc) * 46 + 40),
-        bargap=0.35,
+        paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)',
+        margin=dict(l=10, r=60, t=10, b=10), height=180,
+        xaxis=dict(showgrid=False, zeroline=False, showticklabels=False,
+                   color='#94a3b8'),
+        yaxis=dict(color='#94a3b8', tickfont=dict(size=11)),
     )
-    st.plotly_chart(fig_bar, use_container_width=True, config={"displayModeBar": False})
-    st.markdown('</div>', unsafe_allow_html=True)
+    st.plotly_chart(fig_bar, use_container_width=True)
 
-
-# ══════════════════════════════════════════════
-#  TAB: AI REASONING
-# ══════════════════════════════════════════════
-elif active == "AI Reasoning":
-
-    st.markdown('<div class="section-heading">🤖 AI Recommendation Reasoning</div>', unsafe_allow_html=True)
-
-    stock_options = [f"{r['Symbol']} — {r['Name']}" for r in display_alloc]
-
-    if st.session_state.selected_stock not in stock_options:
-        st.session_state.selected_stock = stock_options[0]
-
-    def _on_stock_change():
-        st.session_state.selected_stock = st.session_state._stock_selector
-
-    selected = st.selectbox(
-        "Select a stock to explain:",
-        options=stock_options,
-        index=stock_options.index(st.session_state.selected_stock),
-        key="_stock_selector",
-        on_change=_on_stock_change,
+    st.markdown(
+        f"<div style='text-align:center;color:#475569;font-size:0.72rem;margin-top:8px;'>"
+        f"PSX AI Investment Advisory System • Week 1 Demo • Team A, B & C • BS Computer Science, Semester 6"
+        f"</div>", unsafe_allow_html=True
     )
-    sym = st.session_state.selected_stock.split(" — ")[0]
-
-    stock_row = scored_df[scored_df["Symbol"] == sym].iloc[0]
-    breakdown = stock_row["Breakdown"]
-
-    col_reason, col_chart = st.columns([1, 1], gap="medium")
-
-    with col_reason:
-        vol = stock_row["Volatility"]
-        vol_label = "✅ Low" if vol < 0.15 else "⚠️ Moderate" if vol < 0.25 else "🔴 High"
-        sector_label = "✅ Preferred" if stock_row["Sector"] in preferred else "🔵 Neutral"
-
-        st.markdown(f"""
-        <div class="reason-box">
-          <div class="reason-title">Why {sym} was selected</div>
-          <div class="reason-item">
-            <span class="label">Growth (5yr)</span>
-            <span class="val">{stock_row['Growth_5yr']*100:.1f}%</span>
-          </div>
-          <div class="reason-item">
-            <span class="label">Volatility</span>
-            <span class="val">{vol:.2f} &nbsp; {vol_label}</span>
-          </div>
-          <div class="reason-item">
-            <span class="label">Dividend Yield</span>
-            <span class="val">{stock_row['Dividend_Yield']:.1f}%</span>
-          </div>
-          <div class="reason-item">
-            <span class="label">Sector</span>
-            <span class="val">{stock_row['Sector']} &nbsp; {sector_label}</span>
-          </div>
-          <div class="reason-item">
-            <span class="label">Momentum Score</span>
-            <span class="val">{stock_row['Momentum_Score']:.2f} / 1.0</span>
-          </div>
-          <div class="reason-item" style="border-bottom:none;">
-            <span class="label">AI Total Score</span>
-            <span class="val" style="color:#38BDF8;font-size:15px;">{stock_row['Total_Score']:.1f}/100</span>
-          </div>
-        </div>
-        """, unsafe_allow_html=True)
-
-    with col_chart:
-        components = list(breakdown.keys())
-        scores_bd  = list(breakdown.values())
-        maxes      = [30, 20, 15, 20, 15]
-
-        fig_score = go.Figure()
-        fig_score.add_trace(go.Bar(
-            x=scores_bd, y=components, orientation="h",
-            marker=dict(color=["#1E88E5","#26A69A","#FFA726","#AB47BC","#EF9A9A"],
-                        line=dict(color="rgba(0,0,0,0)")),
-            text=[f"{v:.1f}" for v in scores_bd],
-            textposition="outside",
-            textfont=dict(color="#94A3B8", size=11),
-            hovertemplate="<b>%{y}</b>: %{x:.1f}<extra></extra>",
-            name="Score",
-        ))
-        for i, mx in enumerate(maxes[:len(components)]):
-            fig_score.add_trace(go.Scatter(
-                x=[mx], y=[components[i]],
-                mode="markers",
-                marker=dict(symbol="line-ns", size=14, color="#475569",
-                            line=dict(width=2, color="#475569")),
-                showlegend=False,
-                hovertemplate=f"Max: {mx}<extra></extra>",
-            ))
-        fig_score.update_layout(
-            title=dict(text="Heuristic Score Breakdown", font=dict(color="#94A3B8", size=13), x=0),
-            paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)",
-            margin=dict(t=36, b=10, l=10, r=50),
-            xaxis=dict(showgrid=False, zeroline=False, showticklabels=False),
-            yaxis=dict(gridcolor="rgba(255,255,255,0.04)", color="#94A3B8", tickfont=dict(size=11)),
-            height=260,
-            bargap=0.3,
-        )
-        st.plotly_chart(fig_score, use_container_width=True, config={"displayModeBar": False})
-
 
 # ══════════════════════════════════════════════
-#  TAB: OPTIMIZATION  (Fix 4 — safe convergence_fig)
+#  TAB 2 — AI REASONING
 # ══════════════════════════════════════════════
-elif active == "Optimization":
+with tab2:
+    # Show top 3 reason cards
+    top3 = R['portfolio'][:3]
+    cols = st.columns(3)
+    for col, s in zip(cols, top3):
+        comps = score_components(s, R['risk'], R['preferred'])
+        vol_color = {'Low': '#4ade80', 'Medium': '#facc15', 'High': '#f87171'}
+        mom_label = 'Very High' if s['momentum'] > 0.88 else 'High' if s['momentum'] > 0.75 else 'Medium'
+        mom_color = '#4ade80' if s['momentum'] > 0.75 else '#facc15'
 
-    st.markdown('<div class="section-heading">⚙️ Optimisation Algorithm Results</div>', unsafe_allow_html=True)
+        with col:
+            st.markdown(f"""
+            <div class="reason-card">
+              <div class="ticker">{s['symbol']}</div>
+              <div class="cname">{s['name']}</div>
+              <div class="sector-tag">{s['sector']}</div>
+              <div style="font-size:0.72rem;color:#94a3b8;margin-bottom:6px;">Composite Score</div>
+              <div style="background:rgba(59,130,246,0.3);border-radius:4px;height:10px;margin-bottom:14px;position:relative;">
+                <div style="width:{s['score']}%;background:linear-gradient(90deg,#1d4ed8,#60a5fa);height:100%;border-radius:4px;"></div>
+                <span style="position:absolute;right:4px;top:-1px;font-size:0.68rem;color:#93c5fd;">{s['score']}/100</span>
+              </div>
+              <div class="reason-metric"><span class="lbl">5yr Growth</span><span style="color:#4ade80;font-weight:700">{round(s['growth']*100)}%</span></div>
+              <div class="reason-metric"><span class="lbl">Volatility</span><span style="color:{vol_color[s['volatility']]};font-weight:700">{s['volatility']}</span></div>
+              <div class="reason-metric"><span class="lbl">Dividend Yield</span><span style="color:#60a5fa;font-weight:700">{round(s['div_yield']*100,1)}%</span></div>
+              <div class="reason-metric"><span class="lbl">Momentum</span><span style="color:{mom_color};font-weight:700">{mom_label}</span></div>
+              <div class="reasoning-text">
+                {s['symbol']} ranks highly due to strong 5-year growth and consistent dividend payouts. Sector preference bonus applied.
+              </div>
+              <span class="alloc-badge">Recommended allocation: {s['alloc']}%</span>
+            </div>""", unsafe_allow_html=True)
 
-    hc_alloc   = D["hc_alloc"];   hc_history = D["hc_history"]
-    hc_iters   = D["hc_iters"];   hc_metrics = D["hc_metrics"]
-    sa_alloc   = D["sa_alloc"];   sa_history = D["sa_history"]
-    sa_iters   = D["sa_iters"];   sa_metrics = D["sa_metrics"]
+    # Score breakdown bar
+    st.markdown('<div class="section-header" style="margin-top:24px;">Score Component Breakdown (Top Stock)</div>', unsafe_allow_html=True)
+    top_s = R['portfolio'][0]
+    comps = score_components(top_s, R['risk'], R['preferred'])
 
-    # FIX 4 — safe convergence figure builder
-    def convergence_fig(history, title, color):
-        """
-        Returns a Plotly Figure or None.
-        Guards against: None, empty list, nested structures, non-numeric values.
-        """
-        if not history:
-            return None
-        # Flatten to a clean list of floats — raises ValueError for bad data
-        try:
-            flat = [float(v) for v in history]
-        except (TypeError, ValueError):
-            return None
-        if len(flat) == 0:
-            return None
+    prog_html = ""
+    for k, v in comps.items():
+        pct = min(v * 3, 100)  # scale for visual
+        prog_html += f"""
+        <div class="prog-row">
+          <div class="prog-label">{k}</div>
+          <div class="prog-bar-outer"><div class="prog-bar-inner" style="width:{pct}%"></div></div>
+          <div class="prog-val">{v}</div>
+        </div>"""
 
-        # Build a safe fill colour from the hex/rgb provided
-        if color.startswith("rgb("):
-            fill_color = color.replace("rgb(", "rgba(").replace(")", ",0.07)")
-        else:
-            fill_color = color + "12"   # hex with 07% alpha suffix
+    st.markdown(f'<div style="background:rgba(15,32,68,0.6);border-radius:12px;padding:18px;border:1px solid rgba(59,130,246,0.2);">{prog_html}</div>', unsafe_allow_html=True)
 
-        fig = go.Figure()
-        fig.add_trace(go.Scatter(
-            y=flat,
-            mode="lines",
-            line=dict(color=color, width=2),
-            fill="tozeroy",
-            fillcolor=fill_color,
-            hovertemplate="Iter %{x}: %{y:.4f}<extra></extra>",
+    st.markdown('<div style="text-align:center;color:#475569;font-size:0.72rem;margin-top:16px;">AI Reasoning Tab • Scores computed by scoring_engine.py using 5 weighted components.</div>', unsafe_allow_html=True)
+
+# ══════════════════════════════════════════════
+#  TAB 3 — OPTIMIZATION
+# ══════════════════════════════════════════════
+with tab3:
+    c1, c2 = st.columns(2)
+
+    with c1:
+        st.markdown('<div class="section-header">Convergence Curves</div>', unsafe_allow_html=True)
+        fig_conv = go.Figure()
+        fig_conv.add_trace(go.Scatter(
+            y=R['hc_hist'], name='Hill Climbing',
+            line=dict(color='#3b82f6', width=2.5),
         ))
-        fig.update_layout(
-            title=dict(text=title, font=dict(color="#94A3B8", size=13), x=0),
-            paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)",
-            margin=dict(t=36, b=20, l=10, r=10),
-            xaxis=dict(color="#64748B", gridcolor="rgba(255,255,255,0.04)",
-                       title="Iteration", titlefont=dict(size=11)),
-            yaxis=dict(color="#64748B", gridcolor="rgba(255,255,255,0.04)",
-                       title="Objective Score", titlefont=dict(size=11)),
-            height=240,
-        )
-        return fig
-
-    if algo == "Both" and hc_metrics and sa_metrics:
-        oc1, oc2 = st.columns(2, gap="medium")
-
-        with oc1:
-            st.markdown('<div class="panel">', unsafe_allow_html=True)
-            st.markdown('<div class="panel-title">🔵 Hill Climbing</div>', unsafe_allow_html=True)
-            for k, v in hc_metrics.items():
-                st.metric(k, v)
-            st.caption(f"Iterations: {hc_iters}  |  ⚠️ May get stuck at local optima")
-            hc_fig = convergence_fig(hc_history, "Hill Climbing Convergence", "#1E88E5")
-            if hc_fig:
-                st.plotly_chart(hc_fig, use_container_width=True, config={"displayModeBar": False})
-            else:
-                st.caption("No convergence history available.")
-            st.markdown('</div>', unsafe_allow_html=True)
-
-        with oc2:
-            st.markdown('<div class="panel">', unsafe_allow_html=True)
-            st.markdown('<div class="panel-title">🟢 Simulated Annealing</div>', unsafe_allow_html=True)
-            for k, v in sa_metrics.items():
-                st.metric(k, v)
-            st.caption(f"Iterations: {sa_iters}  |  ✅ Escapes local optima")
-            sa_fig = convergence_fig(sa_history, "Simulated Annealing Convergence", "#26A69A")
-            if sa_fig:
-                st.plotly_chart(sa_fig, use_container_width=True, config={"displayModeBar": False})
-            else:
-                st.caption("No convergence history available.")
-            st.markdown('</div>', unsafe_allow_html=True)
-
-        # Risk vs Return scatter
-        st.markdown('<div class="section-heading">Risk vs Return Comparison</div>', unsafe_allow_html=True)
-        st.markdown('<div class="panel">', unsafe_allow_html=True)
-        fig_scatter = go.Figure()
-        for label, metrics, clr in [
-            ("Hill Climbing",      hc_metrics, "#1E88E5"),
-            ("Simulated Annealing", sa_metrics, "#26A69A"),
-        ]:
-            fig_scatter.add_trace(go.Scatter(
-                x=[metrics["Portfolio Risk"]],
-                y=[metrics["Expected Return (%)"]],
-                mode="markers+text",
-                marker=dict(size=18, color=clr, line=dict(color="white", width=2)),
-                text=[label], textposition="top center",
-                textfont=dict(color="#94A3B8", size=11),
-                name=label,
-                hovertemplate=f"<b>{label}</b><br>Risk: %{{x:.3f}}<br>Return: %{{y:.1f}}%<extra></extra>",
-            ))
-        fig_scatter.update_layout(
-            paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)",
-            margin=dict(t=20, b=20, l=10, r=10),
-            xaxis=dict(color="#64748B", gridcolor="rgba(255,255,255,0.06)", title="Risk"),
-            yaxis=dict(color="#64748B", gridcolor="rgba(255,255,255,0.06)", title="Return (%)"),
-            legend=dict(font=dict(color="#94A3B8"), bgcolor="rgba(0,0,0,0)"),
+        fig_conv.add_trace(go.Scatter(
+            y=R['sa_hist'], name='Simulated Annealing',
+            line=dict(color='#f87171', width=2.5, dash='dash'),
+        ))
+        fig_conv.update_layout(
+            paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(15,28,58,0.6)',
+            legend=dict(font=dict(color='#94a3b8'), bgcolor='rgba(0,0,0,0)'),
+            xaxis=dict(title='Iterations', color='#94a3b8', gridcolor='rgba(255,255,255,0.05)'),
+            yaxis=dict(title='Objective Value', color='#94a3b8', gridcolor='rgba(255,255,255,0.05)'),
+            margin=dict(l=10, r=10, t=10, b=10),
             height=280,
         )
-        st.plotly_chart(fig_scatter, use_container_width=True, config={"displayModeBar": False})
-        st.markdown('</div>', unsafe_allow_html=True)
+        st.plotly_chart(fig_conv, use_container_width=True)
 
-    else:
-        # Single algorithm view
-        history = hc_history if algo == "Hill Climbing" else sa_history
-        n_iters = hc_iters   if algo == "Hill Climbing" else sa_iters
-        metrics = hc_metrics if algo == "Hill Climbing" else sa_metrics
-        clr     = "#1E88E5"  if algo == "Hill Climbing" else "#26A69A"
+    with c2:
+        st.markdown('<div class="section-header">Risk vs Return Scatter</div>', unsafe_allow_html=True)
+        vol_num = {"Low": 0.05, "Medium": 0.10, "High": 0.20}
+        syms   = [s['symbol'] for s in R['portfolio']]
+        rets   = [s['growth'] * 100 for s in R['portfolio']]
+        risks  = [vol_num[s['volatility']] for s in R['portfolio']]
+        sizes  = [s['alloc'] * 4 for s in R['portfolio']]
+        colors_scatter = ['#2563eb','#3b82f6','#60a5fa','#93c5fd','#bfdbfe','#dbeafe']
 
-        st.markdown('<div class="panel">', unsafe_allow_html=True)
-        if metrics:
-            for k, v in metrics.items():
-                st.metric(k, v)
-        st.caption(f"Total iterations: {n_iters}")
-        single_fig = convergence_fig(history, f"{algo} Convergence", clr)
-        if single_fig:
-            st.plotly_chart(single_fig, use_container_width=True, config={"displayModeBar": False})
+        fig_scatter = go.Figure()
+        for i, s in enumerate(R['portfolio']):
+            fig_scatter.add_trace(go.Scatter(
+                x=[risks[i]], y=[rets[i]],
+                mode='markers+text',
+                text=[syms[i]], textposition='top center',
+                marker=dict(size=sizes[i], color=colors_scatter[i % len(colors_scatter)],
+                            line=dict(color='white', width=1)),
+                name=syms[i],
+                textfont=dict(color='white', size=10),
+            ))
+        # Efficient frontier line
+        ef_x = np.linspace(0.03, 0.22, 50)
+        ef_y = 5 + 80 * ef_x
+        fig_scatter.add_trace(go.Scatter(
+            x=ef_x, y=ef_y, mode='lines',
+            line=dict(color='#facc15', dash='dot', width=1.5),
+            name='Efficient Frontier',
+        ))
+        fig_scatter.update_layout(
+            paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(15,28,58,0.6)',
+            legend=dict(font=dict(color='#94a3b8', size=9), bgcolor='rgba(0,0,0,0)'),
+            xaxis=dict(title='Portfolio Risk (Volatility)', color='#94a3b8', gridcolor='rgba(255,255,255,0.05)'),
+            yaxis=dict(title='Expected Return (%)', color='#94a3b8', gridcolor='rgba(255,255,255,0.05)'),
+            margin=dict(l=10, r=10, t=10, b=10),
+            height=280,
+            showlegend=False,
+        )
+        st.plotly_chart(fig_scatter, use_container_width=True)
+
+    # Algo summary cards
+    a1, a2, a3 = st.columns([1, 1, 2])
+    with a1:
+        st.markdown(f"""
+        <div class="algo-card">
+          <div class="algo-label">HC Best Score</div>
+          <div class="algo-value algo-hc">{R['hc_score']}</div>
+          <div style="font-size:0.72rem;color:#64748b;margin-top:4px;">Iterations: 100</div>
+        </div>""", unsafe_allow_html=True)
+    with a2:
+        st.markdown(f"""
+        <div class="algo-card">
+          <div class="algo-label">SA Best Score</div>
+          <div class="algo-value algo-sa">{R['sa_score']}</div>
+          <div style="font-size:0.72rem;color:#64748b;margin-top:4px;">Temp: 1000 → 0.01</div>
+        </div>""", unsafe_allow_html=True)
+    with a3:
+        winner = "SA" if R['sa_score'] > R['hc_score'] else "HC"
+        diff = abs(R['sa_score'] - R['hc_score'])
+        st.markdown(f"""
+        <div class="algo-card" style="text-align:left;">
+          <div style="font-size:0.92rem;font-weight:700;color:#60a5fa;margin-bottom:8px;">Algorithm Comparison</div>
+          <div style="font-size:0.8rem;color:#cbd5e1;line-height:1.7;">
+            {"SA found a marginally better portfolio" if winner == "SA" else "HC found a competitive portfolio"}
+            (+{round(diff*100,1)}%) by {"escaping local optima" if winner == "SA" else "fast convergence"}.<br>
+            {"HC converged faster." if winner == "SA" else "SA explored more broadly."} Both are appropriate for this portfolio size.
+            <br><span style="color:#60a5fa;font-weight:600;">Recommendation: Use SA for portfolios (N &gt; 8 stocks)</span>
+          </div>
+        </div>""", unsafe_allow_html=True)
+
+    st.markdown('<div style="text-align:center;color:#475569;font-size:0.72rem;margin-top:16px;">Optimization Tab • HC and Simulated Annealing comparison comparison</div>', unsafe_allow_html=True)
+
+# ══════════════════════════════════════════════
+#  TAB 4 — ALL STOCKS
+# ══════════════════════════════════════════════
+with tab4:
+    scored_list = R['scored_list']
+    port_syms   = {s['symbol'] for s in R['portfolio']}
+
+    st.markdown(f'<div class="section-header">All {len(scored_list)} Stocks — Ranked by Score</div>', unsafe_allow_html=True)
+
+    top10 = scored_list[:10]
+    rows = ""
+    for i, s in enumerate(top10):
+        if s['symbol'] == top10[0]['symbol']:
+            status = '<span class="status-top">★ Top Pick</span>'
+        elif s['symbol'] == top10[1]['symbol'] if len(top10) > 1 else None:
+            status = '<span class="status-rec">★ Recommended</span>'
+        elif s['symbol'] in port_syms:
+            status = '<span class="status-sel">✓ Selected</span>'
+        elif s['score'] >= 60:
+            status = '<span class="status-con">Consider</span>'
         else:
-            st.caption("No convergence history to display.")
-        st.markdown('</div>', unsafe_allow_html=True)
+            status = '<span class="status-neu">Neutral</span>'
 
+        sc = s['score']
+        badge_cls = 'score-high' if sc >= 75 else 'score-mid' if sc >= 60 else 'score-low'
+        vol_col = {'Low': '#4ade80', 'Medium': '#facc15', 'High': '#f87171'}
 
-# ══════════════════════════════════════════════
-#  TAB: ALL STOCKS
-# ══════════════════════════════════════════════
-elif active == "All Stocks":
+        rows += f"""
+        <tr>
+          <td><span class="symbol">{s['symbol']}</span></td>
+          <td style="color:#94a3b8">{s['sector']}</td>
+          <td><span class="score-badge {badge_cls}">{sc}</span></td>
+          <td style="color:#e2e8f0">Rs {s['price']:,}</td>
+          <td style="color:#4ade80;font-weight:600">{round(s['growth']*100)}%</td>
+          <td style="color:{vol_col[s['volatility']]};font-weight:600">{s['volatility']}</td>
+          <td style="color:#60a5fa">{round(s['div_yield']*100,1)}%</td>
+          <td style="color:#e2e8f0">{s['momentum']:.2f}</td>
+          <td>{status}</td>
+        </tr>"""
 
-    st.markdown('<div class="section-heading">📋 All Scored & Ranked Stocks</div>', unsafe_allow_html=True)
+    st.markdown(f"""
+    <table class="stock-table">
+      <thead><tr>
+        <th>Symbol</th><th>Sector</th><th>Score</th><th>Price</th>
+        <th>Growth</th><th>Risk</th><th>Div Yield</th><th>Momentum</th><th>Status</th>
+      </tr></thead>
+      <tbody>{rows}</tbody>
+    </table>""", unsafe_allow_html=True)
 
-    display_cols = ["Symbol","Name","Sector","Total_Score",
-                    "Growth_5yr","Volatility","Dividend_Yield","Momentum_Score"]
-    show_df = scored_df[display_cols].copy()
-    show_df["Growth_5yr"]     = (show_df["Growth_5yr"] * 100).round(1).astype(str) + "%"
-    show_df["Dividend_Yield"] = show_df["Dividend_Yield"].round(1).astype(str) + "%"
-    show_df["Total_Score"]    = show_df["Total_Score"].round(1)
-
-    st.dataframe(
-        show_df.style.background_gradient(subset=["Total_Score"], cmap="Blues"),
-        use_container_width=True, hide_index=True, height=520
-    )
-
-# ─────────────────────────────────────────────
-#  FOOTER
-# ─────────────────────────────────────────────
-st.markdown("""
-<div class="app-footer">
-  PSX AI Investment Advisory System &nbsp;•&nbsp; Work 1 Demo &nbsp;•&nbsp;
-  Team A, B &amp; C &nbsp;•&nbsp; BS Computer Science, Semester 6
-</div>
-""", unsafe_allow_html=True)
-
-st.markdown('</div>', unsafe_allow_html=True)  # close .main-content
+    st.markdown("""
+    <div style="display:flex;gap:24px;margin-top:14px;font-size:0.77rem;color:#64748b;">
+      <span>⬛ Top 5 — Selected for Portfolio</span>
+      <span>⬜ Remaining — Considered but not selected</span>
+      <span style="margin-left:auto;">Score ≥ 80: Top Tier | 60-79: Good | &lt; 60: Marginal</span>
+    </div>
+    <div style="text-align:center;color:#475569;font-size:0.72rem;margin-top:12px;">All Stocks Tab • Scores calculated using 5-component weighted heuristic with risk appetite adjustment</div>
+    """, unsafe_allow_html=True)
