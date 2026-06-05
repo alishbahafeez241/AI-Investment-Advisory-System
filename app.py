@@ -1,3 +1,19 @@
+Attachment app.py added.None selected 
+
+Skip to content
+Using Gmail with screen readers
+in:sent 
+1 of 40
+(no subject)
+
+Alishba Hafeez <alishbahafeez241@gmail.com>
+Attachments
+4:31 PM (10 minutes ago)
+to maryamsajjad386
+
+
+ One attachment
+  •  Scanned by Gmail
 """
 AI Investment Advisory System
 BS Computer Science — 6th Semester AI Project
@@ -40,33 +56,33 @@ html, body, [class*="css"] { font-family:'Inter',sans-serif; font-size:13px; }
    SIDEBAR — light theme
 ══════════════════════════════ */
 [data-testid="stSidebar"] {
-    background:linear-gradient(180deg,#0F2647 0%,#163764 50%,#1B4F82 100%) !important;
-    border-right:1px solid rgba(255,255,255,.08) !important;
+    background:#FFFFFF !important;
+    border-right:1px solid #E2E8F0 !important;
     min-width:240px !important;
 }
-[data-testid="stSidebar"] * { color:#E2E8F0 !important; }
+[data-testid="stSidebar"] * { color:#374151 !important; }
 
 /* sidebar section headings */
 [data-testid="stSidebar"] h2 {
-    color:#FFFFFF !important; font-size:14px !important;
+    color:#111827 !important; font-size:14px !important;
     font-weight:700 !important; margin-bottom:2px !important;
 }
 
 /* sidebar labels */
 [data-testid="stSidebar"] label {
-    color:#CBD5E1 !important; font-size:11px !important; font-weight:500 !important;
+    color:#6B7280 !important; font-size:11px !important; font-weight:500 !important;
 }
 
 /* sidebar inputs */
 [data-testid="stSidebar"] [data-baseweb="input"] input {
-    background:rgba(255,255,255,.08) !important; border:1px solid rgba(255,255,255,.15) !important;
-    color:#FFFFFF !important; font-size:12px !important; border-radius:6px !important;
+    background:#F9FAFB !important; border:1px solid #D1D5DB !important;
+    color:#111827 !important; font-size:12px !important; border-radius:6px !important;
 }
 [data-testid="stSidebar"] [data-baseweb="select"] {
-    background:rgba(255,255,255,.08) !important; border:1px solid rgba(255,255,255,.15) !important;
+    background:#F9FAFB !important; border:1px solid #D1D5DB !important;
 }
 [data-testid="stSidebar"] [data-baseweb="select"] div {
-    color:#FFFFFF !important; font-size:12px !important;
+    color:#111827 !important; font-size:12px !important;
 }
 
 /* multiselect tags */
@@ -81,15 +97,15 @@ html, body, [class*="css"] { font-family:'Inter',sans-serif; font-size:13px; }
     padding:0 !important; gap:2px !important; flex-direction:column !important;
 }
 [data-testid="stSidebar"] [data-testid="stRadio"] label {
-    background:rgba(255,255,255,.06) !important; border:1px solid rgba(255,255,255,.12) !important;
+    background:#F9FAFB !important; border:1px solid #E5E7EB !important;
     border-radius:6px !important; padding:7px 12px !important;
     font-size:12px !important; font-weight:500 !important;
-    color:#E2E8F0 !important; cursor:pointer; transition:all .15s;
+    color:#374151 !important; cursor:pointer; transition:all .15s;
     margin-bottom:3px !important;
 }
 [data-testid="stSidebar"] [data-testid="stRadio"] label:has(input:checked) {
-    background:rgba(59,130,246,.25) !important; border-color:#60A5FA !important;
-    color:#FFFFFF !important; font-weight:600 !important;
+    background:#EFF6FF !important; border-color:#93C5FD !important;
+    color:#1D4ED8 !important; font-weight:600 !important;
 }
 
 /* nav radio in sidebar */
@@ -115,7 +131,7 @@ html, body, [class*="css"] { font-family:'Inter',sans-serif; font-size:13px; }
 }
 
 /* divider */
-[data-testid="stSidebar"] hr { border-color:rgba(255,255,255,.12) !important; }
+[data-testid="stSidebar"] hr { border-color:#E5E7EB !important; }
 
 /* ══════════════════════════════
    NAV items with icons (sidebar)
@@ -349,8 +365,8 @@ with st.sidebar:
     st.markdown(
         '<div style="padding:4px 0 10px;">'
         '<span style="font-size:20px;">📈</span>'
-        '<span style="font-size:14px;font-weight:700;color:#FFFFFF;margin-left:6px;">InvestAI</span>'
-        '<div style="font-size:10px;color:#93C5FD;margin-top:1px;">PSX Advisory System</div>'
+        '<span style="font-size:14px;font-weight:700;color:#111827;margin-left:6px;">InvestAI</span>'
+        '<div style="font-size:10px;color:#9CA3AF;margin-top:1px;">PSX Advisory System</div>'
         '</div>',
         unsafe_allow_html=True)
 
@@ -361,7 +377,7 @@ with st.sidebar:
     st.markdown('<hr style="margin:4px 0 10px;"/>', unsafe_allow_html=True)
 
     # ── Navigation with icons
-    st.markdown('<div style="font-size:10px;font-weight:600;color:#93C5FD;text-transform:uppercase;letter-spacing:.06em;margin-bottom:5px;">Navigation</div>', unsafe_allow_html=True)
+    st.markdown('<div style="font-size:10px;font-weight:600;color:#9CA3AF;text-transform:uppercase;letter-spacing:.06em;margin-bottom:5px;">Navigation</div>', unsafe_allow_html=True)
 
     if "nav_page" not in st.session_state:
         st.session_state.nav_page = "Portfolio"
@@ -378,27 +394,27 @@ with st.sidebar:
     st.markdown('<hr style="margin:10px 0;"/>', unsafe_allow_html=True)
 
     # ── Investor profile
-    st.markdown('<div style="font-size:10px;font-weight:600;color:#93C5FD;text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px;">Investor Profile</div>', unsafe_allow_html=True)
+    st.markdown('<div style="font-size:10px;font-weight:600;color:#9CA3AF;text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px;">Investor Profile</div>', unsafe_allow_html=True)
 
     amount        = st.number_input("Investment Amount (PKR)", min_value=100_000, max_value=100_000_000, value=5_000_000, step=100_000)
     duration      = st.slider("Duration (Years)", 1, 15, 5)
     target_return = st.slider("Target Annual Return (%)", 5, 50, 20)
 
     # Risk appetite — vertical, Medium default
-    st.markdown('<div style="font-size:11px;color:#CBD5E1;font-weight:500;margin-bottom:4px;">Risk Appetite</div>', unsafe_allow_html=True)
+    st.markdown('<div style="font-size:11px;color:#6B7280;font-weight:500;margin-bottom:4px;">Risk Appetite</div>', unsafe_allow_html=True)
     risk = st.radio("", ["Low", "Medium", "High"], index=1, key="risk_radio")
 
     st.markdown('<hr style="margin:10px 0;"/>', unsafe_allow_html=True)
 
     # ── Sectors
-    st.markdown('<div style="font-size:10px;font-weight:600;color:#93C5FD;text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px;">Sector Preferences</div>', unsafe_allow_html=True)
+    st.markdown('<div style="font-size:10px;font-weight:600;color:#9CA3AF;text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px;">Sector Preferences</div>', unsafe_allow_html=True)
     preferred = st.multiselect("Preferred Sectors", options=ALL_SECTORS, default=["Banking","Energy"])
     excluded  = st.multiselect("Excluded Sectors", options=[s for s in ALL_SECTORS if s not in preferred], default=[])
 
     st.markdown('<hr style="margin:10px 0;"/>', unsafe_allow_html=True)
 
     # ── Portfolio settings
-    st.markdown('<div style="font-size:10px;font-weight:600;color:#93C5FD;text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px;">Portfolio Settings</div>', unsafe_allow_html=True)
+    st.markdown('<div style="font-size:10px;font-weight:600;color:#9CA3AF;text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px;">Portfolio Settings</div>', unsafe_allow_html=True)
     n_stocks = st.slider("Portfolio Size", 3, 12, 5)
     algo     = st.selectbox("Algorithm", ["Hill Climbing","Simulated Annealing","Both"])
 
@@ -410,9 +426,9 @@ st.markdown("""
 <style>
 /* Override sidebar nav buttons */
 [data-testid="stSidebar"] [data-testid="stButton"] > button {
-    background:rgba(255,255,255,.06) !important;
-    border:1px solid rgba(255,255,255,.10) !important;
-    color:#E2E8F0 !important;
+    background:#F9FAFB !important;
+    border:1px solid #E5E7EB !important;
+    color:#374151 !important;
     font-size:12px !important;
     font-weight:500 !important;
     text-align:left !important;
@@ -422,9 +438,9 @@ st.markdown("""
     margin-bottom:3px !important;
 }
 [data-testid="stSidebar"] [data-testid="stButton"] > button:hover {
-    background:rgba(59,130,246,.20) !important;
-    border-color:#60A5FA !important;
-    color:#FFFFFF !important;
+    background:#EFF6FF !important;
+    border-color:#BFDBFE !important;
+    color:#1D4ED8 !important;
 }
 /* Run Analysis — keep gradient */
 [data-testid="stSidebar"] [data-testid="stButton"]:last-of-type > button {
@@ -734,3 +750,5 @@ elif page == "All Stocks":
 
 st.markdown("<div class='footer'>AI Investment Advisory System · BS CS 6th Semester · PSX Stocks — Simulated Data</div>",
             unsafe_allow_html=True)
+app.py
+Displaying app.py.
