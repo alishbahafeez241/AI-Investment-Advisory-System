@@ -334,6 +334,29 @@ def simulated_annealing(stocks, iterations=100, T_start=1000, T_end=0.01):
 # ─────────────────────────────────────────────
 #  SIDEBAR  — INVESTOR SETTINGS
 # ─────────────────────────────────────────────
+
+with st.sidebar:
+
+    st.markdown("""
+    <div style="
+        background: linear-gradient(90deg, #1d4ed8, #2563eb);
+        color: white;
+        padding: 12px;
+        border-radius: 8px;
+        text-align: center;
+        margin-bottom: 20px;
+    ">
+        <div style="font-size:0.85rem; letter-spacing:0.12em; font-weight:700;">
+            INVESTOR PROFILE
+        </div>
+    </div>
+    """, unsafe_allow_html=True)
+
+    investor_name = st.text_input(
+        "Enter Your Name",
+        value="",
+        placeholder="e.g. Ali Khan"
+    )
 with st.sidebar:
     investor_name = st.text_input("Enter Your Name", value="", placeholder="e.g. Ali Khan")
     if investor_name:
