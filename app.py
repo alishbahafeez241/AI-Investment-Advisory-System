@@ -309,6 +309,12 @@ def simulated_annealing(stocks, iterations=100, T_start=1000, T_end=0.01):
 #  SIDEBAR  — INVESTOR SETTINGS
 # ─────────────────────────────────────────────
 with st.sidebar:
+    # ─────────────────────────────────────────────
+    #  NAVIGATION
+    # ─────────────────────────────────────────────
+    page = st.radio("Navigation", ["Home", "Dashboard"], horizontal=True)
+    st.markdown("<hr style='margin:8px 0;border-color:#e2e8f0;'>", unsafe_allow_html=True)
+
     investor_name = st.text_input("Enter Your Name", value="", placeholder="e.g. Ali Khan")
     if investor_name:
         st.markdown(f"<div style='color:#1d4ed8;font-size:1rem;font-weight:700;margin-top:-4px;margin-bottom:8px;'>Welcome, {investor_name}</div>", unsafe_allow_html=True)
@@ -347,6 +353,51 @@ with st.sidebar:
     run = st.button("Run Analysis", use_container_width=True)
 
 # ─────────────────────────────────────────────
+# ══════════════════════════════════════════════
+#  HOME PAGE
+# ══════════════════════════════════════════════
+if page == "Home":
+    st.markdown("""
+    <div style="text-align:center; padding:40px 20px;">
+        <h1 style="color:#1d4ed8; font-size:2.2rem; font-weight:800; margin-bottom:12px;">PSX AI Investment Advisory</h1>
+        <p style="color:#475569; font-size:1.1rem; max-width:600px; margin:0 auto 32px;">
+            Welcome! Use the sidebar to enter your investment preferences, then switch to <strong>Dashboard</strong> to view your personalized portfolio analysis.
+        </p>
+    </div>
+    """, unsafe_allow_html=True)
+
+    st.markdown('<div class="section-header">Your Current Settings</div>', unsafe_allow_html=True)
+
+    c1, c2, c3 = st.columns(3)
+    with c1:
+        st.metric("Investment Amount", f"Rs {invest_amount:,}")
+        st.metric("Duration", f"{duration} Years")
+    with c2:
+        st.metric("Target Return", f"{target_return}%")
+        st.metric("Risk Appetite", risk_appetite)
+    with c3:
+        st.metric("Portfolio Size", f"{portfolio_size} Stocks")
+        st.metric("Algorithm", algorithm)
+
+    st.markdown("<br>", unsafe_allow_html=True)
+
+    col1, col2 = st.columns(2)
+    with col1:
+        st.markdown("**Preferred Sectors:** " + (", ".join(preferred) if preferred else "None"))
+    with col2:
+        st.markdown("**Excluded Sectors:** " + (", ".join(excluded) if excluded else "None"))
+
+    if investor_name:
+        st.markdown(f"<div style='text-align:center;margin-top:24px;'><span style='background:#dbeafe;color:#1d4ed8;padding:8px 16px;border-radius:8px;font-weight:600;'>Investor: {investor_name}</span></div>", unsafe_allow_html=True)
+
+    st.markdown("""
+    <div style="text-align:center; margin-top:32px; padding:20px; background:#f1f5f9; border-radius:12px;">
+        <p style="color:#475569; font-size:1rem;">Click <strong>Run Analysis</strong> in the sidebar, then switch to <strong>Dashboard</strong> to see results.</p>
+    </div>
+    """, unsafe_allow_html=True)
+
+    st.stop()
+
 #  TITLE BAR
 # ─────────────────────────────────────────────
 st.markdown('<div class="title-bar">PSX AI Investment Advisory System — Streamlit Dashboard</div>', unsafe_allow_html=True)
