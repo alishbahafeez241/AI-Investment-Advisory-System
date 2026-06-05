@@ -548,7 +548,7 @@ with tab1:
 
     st.markdown("<br>", unsafe_allow_html=True)
 
-    col_left, col_right = st.columns([1, 1.4])
+    col_left, col_right = st.columns([1.2, 1.8])
 
     with col_left:
         st.markdown('<div class="section-header">Portfolio Allocation</div>', unsafe_allow_html=True)
@@ -570,7 +570,7 @@ with tab1:
             paper_bgcolor='rgba(0,0,0,0)',
             plot_bgcolor='rgba(0,0,0,0)',
             margin=dict(l=10, r=10, t=10, b=10),
-            height=230,
+            height=380,
             annotations=[dict(text=f"{len(R['portfolio'])} Stocks<br>Diversified",
                               x=0.5, y=0.5, font_size=12, showarrow=False,
                               font_color='#94a3b8')]
