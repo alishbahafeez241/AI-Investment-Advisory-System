@@ -159,7 +159,7 @@ div[data-testid="stButton"] > button:hover {
 
 #MainMenu { visibility: hidden; }
 footer { visibility: hidden; }
-header { visibility: hidden; }
+/*header { visibility: hidden; } */
 
 label { color: #0f172a !important; font-size: 0.88rem !important; font-weight: 600 !important; }
 .stNumberInput input, .stSelectbox div[data-baseweb="select"] > div, .stMultiSelect div[data-baseweb="select"] > div, .stTextInput input {
