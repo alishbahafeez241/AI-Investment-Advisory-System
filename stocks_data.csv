@@ -24,3 +24,229 @@ COLG,Colgate-Palmolive Pak,FMCG,2850,0.09,0.09,4.2,0.58,280
 UNILEVER,Unilever Pakistan,FMCG,1850,0.08,0.07,5.8,0.55,350
 STJC,St. Joseph Cement,Cement,145,0.11,0.17,3.0,0.60,130
 ATRL,Attock Refinery,Energy,480,0.16,0.19,6.5,0.70,160
+ATRL	Attock Refinery	Energy	480	0.16	0.19	6.5	0.7	160
+MEBL	Meezan Bank	Banking	5686	0.11	0.21	8.8	0.94	316
+AVN	Avanceon Limited	Technology	320	0.2	0.21	1.8	0.6	213
+BIPL	Bank Islami	Banking	17	0.13	0.31	12.5	0.53	161
+HASH	Hashoo Group	Misc	7200	0.22	0.28	11.7	0.59	89
+PAKRI	Pak Reinsurance	Insurance	84	0.07	0.27	11.6	0.55	138
+FFBL	Fauji Fert Bin Qasim	Fertilizer	35	0.21	0.3	8	0.52	316
+PKGS	Packages Limited	Misc	1079	0.22	0.3	13.1	0.58	41
+PACE	Pace Pakistan	Misc	4076	0.28	0.2	2.8	0.6	69
+NATF	National Foods	FMCG	5172	0.37	0.21	0.8	0.73	135
+SMBL	Summit Bank	Banking	7603	0.14	0.23	9	0.69	338
+MRNS	Mehran Sugar	Food	193	0.19	0.25	4.3	0.65	424
+SILK	Silk Bank	Banking	1880	0.12	0.14	13.5	0.91	165
+ASC	Al-Shaheer Corp	Food	5359	0.05	0.29	4.3	0.81	108
+LPCL	Lafarge Pakistan	Cement	108	0.3	0.12	9.2	0.62	290
+LOADS2	Lotte Akhtar	Chemicals	41	0.05	0.28	9.2	0.62	419
+PIOC	Pioneer Cement	Cement	89	0.24	0.3	8.4	0.57	105
+TRIPF	Tri-Pack Films	Misc	381	0.12	0.14	1.5	0.86	248
+FCCL	Fauji Cement	Cement	94	0.36	0.08	10.7	0.65	250
+AKBL	Askari Bank	Banking	99	0.18	0.08	6.8	0.59	275
+PREMA	At-Tahur Limited	FMCG	578	0.16	0.3	14	0.63	368
+FRCL	Frontier Ceramics	Glass	356	0.11	0.33	3.8	0.55	262
+FCEPL	Frieslandcampina	FMCG	1986	0.12	0.08	6.3	0.74	452
+EFUL	EFU Life	Insurance	72	0.38	0.32	9	0.81	103
+MENG	Maple Energy	Energy	207	0.24	0.12	9.6	0.67	423
+MACTER	Macter International	Pharma	204	0.12	0.28	8.8	0.65	266
+STRADE	Systems Trade	Misc	37	0.28	0.15	9.6	0.78	87
+STCL	Shabbir Tiles	Glass	101	0.07	0.34	8.9	0.85	273
+PAFL	Pak Arab Fert	Fertilizer	81	0.1	0.26	12.9	0.9	94
+NBP	National Bank	Banking	4359	0.14	0.3	6.6	0.87	381
+BCL	Bolan Castings	Engineering	4209	0.2	0.31	6.5	0.57	283
+JGICL	Jubilee General	Insurance	622	0.27	0.14	1.1	0.63	179
+TELE	Telecard Limited	Technology	109	0.3	0.09	5.9	0.75	252
+FATIMA	Fatima Fertilizer	Fertilizer	22	0.35	0.28	5.5	0.5	220
+ALTN	Altern Energy	Power	4860	0.33	0.31	7.1	0.63	288
+HINO	Hinopak Motors	Auto	723	0.37	0.33	7.7	0.92	343
+DNCC	Dandot Cement	Cement	74	0.14	0.16	6.6	0.66	234
+SEPL	Sapphire Electric	Power	4398	0.07	0.33	3.3	0.53	373
+UNITY	Unity Foods	Food	18	0.09	0.25	8.2	0.6	398
+GHNI	Ghandhara Nissan	Auto	54	0.39	0.1	0.4	0.64	386
+WYETH	Wyeth Pakistan	Pharma	54	0.09	0.28	12.3	0.78	101
+GTYR	General Tyre	Auto	99	0.23	0.16	12.3	0.88	94
+INDU	Indus Motor	Auto	53	0.31	0.33	3.9	0.87	315
+AIRLINK	Air Link Comm	Technology	64	0.34	0.09	12.8	0.61	277
+MUGHAL	Mughal Iron	Steel	795	0.12	0.29	4.9	0.9	399
+SAPL	Sanofi-Aventis	Pharma	553	0.22	0.27	10	0.8	291
+CLIMAX	Climax Engineering	Engineering	2854	0.18	0.22	5	0.96	321
+ABOT	Abbott Laboratories	Pharma	89	0.16	0.27	13.8	0.82	138
+LOTCHEM	Lotte Chemical	Chemicals	323	0.39	0.29	4.3	0.67	194
+ABL	Allied Bank	Banking	71	0.27	0.27	1.5	0.51	185
+BATA	Bata Pakistan	Misc	441	0.09	0.09	7.1	0.77	391
+KASB	KASB Bank	Banking	21	0.25	0.18	8.6	0.78	437
+PCAL	Pakistan Cables	Engineering	244	0.25	0.09	13.9	0.55	430
+ISIL2	Ittefaq Iron	Steel	37	0.1	0.18	10	0.72	56
+PSEL	Pakistan Services	Misc	317	0.33	0.24	9.6	0.93	257
+WAVES	Waves Singer	Engineering	27	0.11	0.15	10.9	0.76	187
+ATIL	Atlas Insurance	Insurance	3051	0.22	0.09	0.6	0.7	205
+FASM	Faisal Spinning	Textile	7052	0.38	0.34	9.7	0.62	60
+AGL	Agritech Limited	Fertilizer	3091	0.2	0.29	14.1	0.72	249
+HCAR	Honda Atlas Cars	Auto	360	0.28	0.18	11	0.52	85
+CHCC	Cherat Cement	Cement	48	0.28	0.22	6	0.59	225
+NML	Nishat Mills	Textile	67	0.37	0.19	10.1	0.56	362
+HMB	Habib Metro Bank	Banking	79	0.13	0.3	1.6	0.94	371
+ATLH	Atlas Honda	Auto	807	0.39	0.14	8	0.68	346
+NRL	National Refinery	Energy	621	0.17	0.28	3.9	0.5	411
+FWBL	First Women Bank	Banking	2210	0.22	0.16	11.1	0.67	204
+PAEL	Pak Elektron	Engineering	706	0.07	0.27	10.2	0.87	237
+ASTL	Amreli Steels	Steel	98	0.23	0.23	12.6	0.9	265
+HALEON	Haleon Pakistan	Pharma	111	0.08	0.28	3.8	0.79	243
+PTC	Pakistan Telecom	Technology	359	0.27	0.31	7.1	0.75	356
+MFFL	Mitchell's Fruit	FMCG	1198	0.39	0.28	10.2	0.55	125
+PSMC	Pak Suzuki Motor	Auto	133	0.2	0.14	6	0.81	132
+ICI	ICI Pakistan	Chemicals	2838	0.1	0.19	3.7	0.62	44
+AGIL	Agriauto Industries	Auto	201	0.4	0.15	13.9	0.82	273
+KEL	K-Electric	Power	2813	0.18	0.15	10.1	0.51	464
+CSML	Colony Sugar	Chemicals	84	0.37	0.27	12.1	0.92	437
+RMPL	Rafhan Maize	FMCG	79	0.27	0.31	9.4	0.64	265
+EXIDE	Exide Pakistan	Auto	1128	0.11	0.11	7.8	0.95	311
+MTL	Millat Tractors	Auto	166	0.31	0.16	1.7	0.94	112
+FSWL	Faran Sugar	Food	3902	0.18	0.28	0.2	0.75	272
+ASL	Aisha Steel Mills	Steel	193	0.09	0.13	0.4	0.91	327
+DAWH	Dawood Hercules	Fertilizer	301	0.28	0.1	0.7	0.52	292
+PRL	Pakistan Refinery	Energy	3723	0.2	0.27	2.2	0.69	90
+ISL	International Steels	Steel	80	0.21	0.33	12.4	0.55	391
+SEARL	Searle Company	Pharma	54	0.38	0.29	1.3	0.6	367
+KSBP	KSB Pumps	Engineering	2056	0.12	0.29	8	0.77	456
+ATPL	Atlas Power	Power	49	0.4	0.22	11.6	0.55	53
+MATCO	Matco Foods	FMCG	341	0.07	0.27	7.6	0.84	283
+NCL	Nishat Chunian	Textile	2707	0.07	0.28	12.6	0.74	274
+MTM	Masood Textile	Textile	83	0.22	0.32	1.1	0.54	351
+SYM	Symmetry Group	Technology	868	0.4	0.21	6.6	0.78	90
+BPL	Burshane LPG	Energy	27	0.2	0.31	6	0.88	244
+PAKT	Pakistan Tobacco	Misc	25	0.29	0.2	1.3	0.54	261
+GHGL	Ghandhara Auto	Auto	5188	0.25	0.25	6	0.9	424
+THCCL	Thatta Cement	Cement	59	0.25	0.13	9.5	0.6	95
+TSML	Tandlianwala Sugar	Food	623	0.35	0.33	11.9	0.78	369
+FABL	Faysal Bank	Banking	304	0.3	0.15	4.9	0.5	113
+CNERGY	Cnergyico	Energy	1408	0.13	0.18	4.9	0.67	409
+SRVI	Service Industries	Misc	2258	0.07	0.09	6.4	0.7	350
+BWCL	Bestway Cement	Cement	331	0.29	0.23	7.6	0.64	152
+ARPL	Archroma Pakistan	Chemicals	78	0.32	0.15	1.7	0.73	260
+LCI	Lucky Core	Misc	317	0.08	0.3	0.6	0.51	79
+DOL	Descon Oxychem	Chemicals	106	0.19	0.33	2.5	0.94	275
+IGIHL	IGI Holdings	Insurance	2855	0.19	0.09	12.6	0.84	153
+GLAXO	GlaxoSmithKline Pak	Pharma	263	0.17	0.33	9.4	0.57	92
+CPHL	Citi Pharma	Pharma	36	0.38	0.24	6.7	0.76	336
+GWLC	Gharibwal Cement	Cement	278	0.1	0.09	6.4	0.64	180
+BUXL	Buxly Paints	Chemicals	141	0.34	0.09	12.5	0.89	354
+IBLHL	IBL HealthCare	Pharma	77	0.21	0.29	9.5	0.65	283
+AGHA	Agha Steel	Steel	68	0.23	0.12	3.6	0.7	264
+KML	Kohinoor Mills	Textile	222	0.29	0.08	9.1	0.65	208
+OCTOPUS	Octopus Digital	Technology	5665	0.36	0.16	8.4	0.57	219
+SNGP	Sui Northern Gas	Energy	48	0.16	0.17	11.5	0.87	383
+BERG	Berger Paints	Chemicals	1130	0.23	0.07	4.5	0.94	214
+SHIELD	Shield Corporation	FMCG	115	0.23	0.22	10.7	0.74	378
+BOP	Bank of Punjab	Banking	2303	0.33	0.11	6.3	0.69	386
+FFL	Fauji Foods	FMCG	117	0.24	0.15	11.7	0.72	467
+HSM	Habib Sugar	Food	752	0.23	0.18	2.3	0.59	349
+SAPT	Sapphire Textile	Textile	30	0.3	0.21	1.8	0.54	122
+EPCL	Engro Polymer	Fertilizer	110	0.34	0.31	13.5	0.69	242
+ILP	Interloop Limited	Textile	68	0.34	0.25	11.5	0.56	186
+UBLI	UBL Insurers	Insurance	4390	0.05	0.09	3.7	0.88	320
+KOHC	Kohat Cement	Cement	114	0.07	0.18	11.5	0.71	96
+ACPL	Attock Cement	Cement	67	0.15	0.07	5.1	0.76	135
+DYNO	Dynea Pakistan	Chemicals	4777	0.33	0.21	0.3	0.9	62
+POWER	Power Cement	Cement	191	0.13	0.25	1.5	0.77	427
+SAZEW	Sazgar Engineering	Auto	1051	0.39	0.2	2.6	0.56	406
+ISIL	Ismail Industries	FMCG	96	0.16	0.15	5.8	0.88	282
+FEROZ	Ferozsons Labs	Pharma	174	0.15	0.29	6.3	0.68	265
+SGF	Shakarganj Limited	Food	4583	0.14	0.09	6.2	0.7	461
+TGL2	Tariq Glass	Glass	662	0.26	0.19	10	0.66	61
+HTL	Hi-Tech Lubricants	Energy	91	0.08	0.24	5.3	0.87	387
+RPL	Roshan Packages	Misc	18	0.07	0.28	5.3	0.68	330
+DSL	Dost Steels	Steel	18	0.25	0.21	5.8	0.8	167
+MUREB	Murree Brewery	FMCG	116	0.14	0.14	6.5	0.96	186
+NPL	Nishat Power	Power	120	0.36	0.19	1.3	0.81	203
+EFUG	EFU General	Insurance	90	0.3	0.32	9.2	0.87	300
+NIB	NIB Bank	Banking	342	0.24	0.17	11.7	0.75	353
+DCL	Dewan Cement	Cement	974	0.32	0.29	1.1	0.95	368
+CRTM	Crescent Textile	Textile	6838	0.27	0.12	14	0.7	68
+TREET	Treet Corporation	FMCG	69	0.17	0.32	13	0.89	168
+BYCO	Byco Petroleum	Energy	36	0.23	0.12	13.7	0.57	377
+ADMM	Artistic Denim	Textile	81	0.08	0.33	11.2	0.62	147
+SENG	Sui Energy	Energy	299	0.27	0.15	3.6	0.87	247
+INIL	International Inds	Steel	23	0.17	0.11	12.5	0.65	216
+AGP	AGP Limited	Pharma	849	0.09	0.19	2	0.52	236
+SBL	Samba Bank	Banking	6732	0.3	0.12	2.3	0.96	279
+WTL	WorldCall Telecom	Technology	47	0.13	0.17	0.7	0.73	374
+FML	Feroze1888 Mills	Textile	122	0.3	0.28	5.3	0.68	331
+GADT	Gadoon Textile	Textile	4262	0.15	0.34	9.9	0.55	89
+SHEL	Shell Pakistan	Energy	98	0.26	0.18	0.6	0.52	405
+YOUW	Yousaf Weaving	Textile	248	0.38	0.16	5.7	0.78	193
+SINGER	Singer Pakistan	Engineering	792	0.34	0.17	9.8	0.95	338
+CEPB	Century Paper	Misc	364	0.39	0.28	11.3	0.77	409
+GATM	Gul Ahmed Textile	Textile	977	0.1	0.25	0.5	0.94	96
+MIRKS	Mirpurkhas Sugar	Engineering	2586	0.32	0.32	12.7	0.84	71
+SITC	Sitara Chemical	Fertilizer	1198	0.16	0.12	13.2	0.66	221
+NONS	Noon Sugar	Food	1043	0.12	0.14	8.1	0.6	192
+KTML	Kohinoor Textile	Textile	4463	0.38	0.28	4	0.56	386
+PMPK	Philip Morris Pak	Misc	109	0.15	0.15	10.4	0.66	266
+NRSL	Nimir Resins	Fertilizer	3044	0.29	0.11	8.9	0.77	164
+BAFL	Bank Alfalah	Banking	183	0.3	0.1	11.2	0.5	321
+MDTL	Media Times	Technology	32	0.31	0.15	4.1	0.53	433
+HICL	Habib Insurance	Insurance	75	0.2	0.3	13.5	0.52	468
+HINOON	Highnoon Labs	Pharma	57	0.05	0.22	1.6	0.95	185
+PKGP	Pakgen Power	Power	2113	0.21	0.12	1.6	0.57	274
+LOADS	Loads Limited	Auto	90	0.11	0.3	13	0.88	303
+CPPL	Cherat Packaging	Misc	57	0.05	0.17	6.5	0.62	208
+KCL	Karam Ceramics	Glass	47	0.28	0.2	2.3	0.82	400
+FLYNG	Flying Cement	Cement	87	0.13	0.11	2.2	0.84	350
+AICL	Adamjee Insurance	Insurance	89	0.32	0.25	8.6	0.86	309
+TPLP	TPL Properties	Misc	1620	0.37	0.12	7.8	0.58	306
+JDWS	JDW Sugar	Food	791	0.33	0.19	7.4	0.71	69
+ICL	Ittehad Chemicals	Chemicals	74	0.31	0.23	0.7	0.66	72
+EPQL	Engro Powergen	Power	370	0.19	0.28	11.1	0.95	370
+LPL	Lalpir Power	Power	759	0.18	0.25	9.6	0.75	374
+HASCOL	Hascol Petroleum	Energy	27	0.34	0.27	14.2	0.71	408
+SNBL	Soneri Bank	Banking	351	0.12	0.31	11.1	0.51	378
+JSBL	JS Bank	Banking	59	0.26	0.19	9.7	0.9	165
+THALL	Thal Limited	Auto	93	0.1	0.34	3.4	0.92	334
+TPLI	TPL Insurance	Insurance	78	0.39	0.21	6	0.63	325
+SSGC	Sui Southern Gas	Energy	901	0.07	0.16	9.3	0.68	308
+CSAP	Crescent Steel	Steel	701	0.13	0.13	12.4	0.57	277
+HSPI	Huffaz Seamless	Engineering	74	0.14	0.16	1.1	0.71	229
+GO	GO Petroleum	Energy	5781	0.06	0.09	11.7	0.77	383
+AHCL	Arif Habib Corp	Fertilizer	74	0.12	0.12	10.8	0.84	426
+SPWL	Saif Power	Power	7423	0.16	0.15	6.8	0.8	197
+TGL	Tenaga Generasi	Power	479	0.32	0.16	2.9	0.64	63
+HUMNL	Hum Network	Technology	7556	0.3	0.15	2.8	0.61	331
+SCBPL	Standard Chartered Pak	Banking	948	0.39	0.24	7.1	0.58	447
+POL	Pakistan Oilfields	Energy	52	0.23	0.3	1.1	0.88	64
+GHGL2	Ghani Glass	Glass	95	0.13	0.19	0.9	0.79	355
+DLL	Dawood Lawrencepur	Cement	739	0.09	0.22	2.7	0.54	404
+MEHT	Mehmood Textile	Insurance	627	0.2	0.15	8.5	0.71	193
+FZTM	Feroze Textile	Food	41	0.16	0.2	5	0.71	351
+SHJS	Shahtaj Sugar	Cement	153	0.38	0.18	13.9	0.54	325
+STM	Shams Textile	Pharma	745	0.26	0.23	6.6	0.89	178
+RAVT	Ravi Textile	Auto	467	0.28	0.34	11.9	0.63	237
+KPUS	Khairpur Sugar	Cement	217	0.26	0.2	3.2	0.63	418
+BTML	Brothers Textile	Cement	41	0.21	0.22	12.8	0.88	321
+ALTN2	Allawasaya Textile	Textile	236	0.1	0.12	3.4	0.61	288
+SGF2	Service Global	Chemicals	102	0.24	0.23	4.6	0.56	303
+BTL	Blessed Textile	Misc	303	0.35	0.33	9.9	0.76	243
+SDTM	Shadab Textile	Textile	57	0.07	0.13	2.4	0.66	66
+CSIL	Crescent Star	Food	279	0.06	0.31	8.9	0.57	169
+JDMT	Janana De Malucho	Power	115	0.22	0.33	7	0.64	113
+POML	Punjab Oil	Cement	691	0.23	0.13	13.8	0.67	393
+TOWL	Towellers Limited	Power	981	0.08	0.3	7.5	0.92	222
+QUICE	Quice Food	Engineering	269	0.13	0.29	14.3	0.89	452
+NSM	National Silk	Insurance	40	0.22	0.27	14.3	0.86	281
+CWSM	Chenab Limited	FMCG	314	0.38	0.34	13.8	0.67	152
+RCML	Reliance Cotton	Food	252	0.39	0.23	0	0.92	216
+KOSM	Kohinoor Spinning	FMCG	144	0.3	0.12	12.9	0.7	365
+IDSM	Indus Dyeing	Steel	344	0.19	0.33	10.5	0.58	105
+SANSM	Sana Industries	Cement	912	0.26	0.23	6.9	0.93	119
+SAIF	Saif Textile	Engineering	416	0.09	0.27	2	0.95	139
+PASL	Pervez Ahmed	Insurance	179	0.13	0.23	3.8	0.69	107
+IDYM	Idrees Textile	Food	1387	0.34	0.21	12	0.9	106
+SURC	Suraj Cotton	FMCG	267	0.11	0.07	11.6	0.58	282
+AATM	Ali Asghar Textile	Insurance	468	0.24	0.2	11.3	0.91	69
+DINT	Din Textile	Steel	1249	0.25	0.28	13.2	0.7	353
+GAHL	Gul Ahmed Holdings	Steel	290	0.23	0.29	7.4	0.61	307
+TSPL	Trust Securities	Misc	686	0.38	0.3	2	0.56	266
+FCSC	First Capital	Engineering	48	0.16	0.1	11.3	0.93	369
+BNWM	Bannu Woollen	Textile	160	0.31	0.1	12.8	0.57	381
+ZTL	Zephyr Textile	Chemicals	875	0.17	0.12	4.6	0.83	49
