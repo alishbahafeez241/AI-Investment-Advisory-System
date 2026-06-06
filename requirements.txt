@@ -6,5 +6,4 @@ matplotlib>=3.8.0
 textblob
 requests
 beautifulsoup4
-pandas
 numpy
