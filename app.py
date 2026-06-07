@@ -198,23 +198,45 @@ label { color: #0f172a !important; font-size: 0.88rem !important; font-weight: 6
 """, unsafe_allow_html=True)
 
 # ─────────────────────────────────────────────
+#  FALLBACK STOCK DATA
+#  Used when stocks_data.csv is missing
+# ─────────────────────────────────────────────
+FALLBACK_STOCKS_DATA = [
+    {"Symbol": "HBL",   "Name": "Habib Bank Ltd",          "Sector": "Banking",    "Price_PKR": 145.0, "Growth_5yr": 0.22, "Volatility": 0.18, "Dividend_Yield": 8.5,  "Momentum_Score": 0.82},
+    {"Symbol": "UBL",   "Name": "United Bank Ltd",          "Sector": "Banking",    "Price_PKR": 175.0, "Growth_5yr": 0.19, "Volatility": 0.16, "Dividend_Yield": 9.2,  "Momentum_Score": 0.78},
+    {"Symbol": "MCB",   "Name": "MCB Bank Ltd",             "Sector": "Banking",    "Price_PKR": 210.0, "Growth_5yr": 0.20, "Volatility": 0.15, "Dividend_Yield": 10.1, "Momentum_Score": 0.80},
+    {"Symbol": "OGDC",  "Name": "Oil & Gas Dev Company",    "Sector": "Energy",     "Price_PKR": 98.0,  "Growth_5yr": 0.15, "Volatility": 0.22, "Dividend_Yield": 12.0, "Momentum_Score": 0.70},
+    {"Symbol": "PPL",   "Name": "Pakistan Petroleum Ltd",   "Sector": "Energy",     "Price_PKR": 85.0,  "Growth_5yr": 0.14, "Volatility": 0.20, "Dividend_Yield": 11.5, "Momentum_Score": 0.68},
+    {"Symbol": "PSO",   "Name": "Pakistan State Oil",       "Sector": "Energy",     "Price_PKR": 220.0, "Growth_5yr": 0.18, "Volatility": 0.25, "Dividend_Yield": 7.0,  "Momentum_Score": 0.72},
+    {"Symbol": "LUCK",  "Name": "Lucky Cement Ltd",         "Sector": "Cement",     "Price_PKR": 680.0, "Growth_5yr": 0.25, "Volatility": 0.21, "Dividend_Yield": 4.5,  "Momentum_Score": 0.85},
+    {"Symbol": "DGKC",  "Name": "DG Khan Cement",           "Sector": "Cement",     "Price_PKR": 95.0,  "Growth_5yr": 0.16, "Volatility": 0.23, "Dividend_Yield": 3.8,  "Momentum_Score": 0.65},
+    {"Symbol": "ENGRO", "Name": "Engro Corporation",        "Sector": "Fertilizer", "Price_PKR": 310.0, "Growth_5yr": 0.28, "Volatility": 0.19, "Dividend_Yield": 13.0, "Momentum_Score": 0.88},
+    {"Symbol": "FFC",   "Name": "Fauji Fertilizer Company", "Sector": "Fertilizer", "Price_PKR": 125.0, "Growth_5yr": 0.12, "Volatility": 0.14, "Dividend_Yield": 15.0, "Momentum_Score": 0.75},
+    {"Symbol": "NESTLE","Name": "Nestle Pakistan",          "Sector": "FMCG",       "Price_PKR": 6500.0,"Growth_5yr": 0.21, "Volatility": 0.13, "Dividend_Yield": 2.5,  "Momentum_Score": 0.83},
+    {"Symbol": "COLG",  "Name": "Colgate-Palmolive Pak",    "Sector": "FMCG",       "Price_PKR": 2400.0,"Growth_5yr": 0.18, "Volatility": 0.12, "Dividend_Yield": 3.2,  "Momentum_Score": 0.79},
+    {"Symbol": "TRG",   "Name": "TRG Pakistan Ltd",         "Sector": "Technology", "Price_PKR": 115.0, "Growth_5yr": 0.35, "Volatility": 0.30, "Dividend_Yield": 0.0,  "Momentum_Score": 0.90},
+    {"Symbol": "NETSOL","Name": "NetSol Technologies",      "Sector": "Technology", "Price_PKR": 135.0, "Growth_5yr": 0.32, "Volatility": 0.28, "Dividend_Yield": 1.5,  "Momentum_Score": 0.87},
+    {"Symbol": "PAKT",  "Name": "Pakistan Tobacco Company", "Sector": "Tobacco",    "Price_PKR": 780.0, "Growth_5yr": 0.10, "Volatility": 0.11, "Dividend_Yield": 18.0, "Momentum_Score": 0.60},
+]
+
+
+# ─────────────────────────────────────────────
 #  LOAD STOCK UNIVERSE FROM CSV
-#  This is the merged natural-language + stock
-#  dataset your instructor requires.
 # ─────────────────────────────────────────────
 @st.cache_data
 def load_stocks_csv():
     """
-    Load stocks_data.csv and normalize column names so they match
-    what both the old scoring helpers and the new scoring_engine.py expect.
+    Load stocks_data.csv and normalize column names.
+    Falls back to built-in demo data if the file is missing or malformed.
 
-    CSV columns   : Symbol, Name, Sector, Price_PKR, Growth_5yr,
-                    Volatility, Dividend_Yield, Momentum_Score, Market_Cap_B
-    Added columns : volatility_label (Low/Medium/High) mapped from numeric Volatility
+    Expected CSV columns:
+        Symbol, Name, Sector, Price_PKR, Growth_5yr,
+        Volatility, Dividend_Yield, Momentum_Score, Market_Cap_B (optional)
     """
-    df = pd.read_csv("stocks_data.csv")
 
-    # Map numeric volatility to label used by old score helpers
+    REQUIRED_COLS = {"Symbol", "Name", "Sector", "Price_PKR",
+                     "Growth_5yr", "Volatility", "Dividend_Yield", "Momentum_Score"}
+
     def vol_label(v):
         if v <= 0.15:
             return "Low"
@@ -223,35 +245,88 @@ def load_stocks_csv():
         else:
             return "High"
 
-    df["volatility_label"] = df["Volatility"].apply(vol_label)
+    def df_to_stocks(df):
+        stocks = []
+        for _, row in df.iterrows():
+            try:
+                stocks.append({
+                    "symbol":          str(row["Symbol"]).strip(),
+                    "name":            str(row["Name"]).strip(),
+                    "sector":          str(row["Sector"]).strip(),
+                    "price":           float(row["Price_PKR"]),
+                    "growth":          float(row["Growth_5yr"]),
+                    "volatility":      vol_label(float(row["Volatility"])),
+                    "div_yield":       float(row["Dividend_Yield"]) / 100,
+                    "momentum":        float(row["Momentum_Score"]),
+                    "_volatility_raw": float(row["Volatility"]),
+                    "_market_cap":     float(row["Market_Cap_B"]) if "Market_Cap_B" in row and pd.notna(row.get("Market_Cap_B")) else 0.0,
+                })
+            except (ValueError, KeyError):
+                # Skip malformed rows silently
+                continue
+        return stocks
 
-    # Build the STOCKS list format expected by the original app helpers
-    stocks = []
-    for _, row in df.iterrows():
-        stocks.append({
-            "symbol":     row["Symbol"],
-            "name":       row["Name"],
-            "sector":     row["Sector"],
-            "price":      row["Price_PKR"],
-            "growth":     row["Growth_5yr"],
-            "volatility": row["volatility_label"],   # "Low" / "Medium" / "High"
-            "div_yield":  row["Dividend_Yield"] / 100,  # CSV stores as %, convert to decimal
-            "momentum":   row["Momentum_Score"],
-            # Keep raw columns for new pipeline
-            "_volatility_raw": row["Volatility"],
-            "_market_cap":     row["Market_Cap_B"],
-        })
+    # ── Try loading the CSV ──────────────────────────────────────────────
+    try:
+        df = pd.read_csv("stocks_data.csv")
+
+        # Strip whitespace from column names (common CSV formatting issue)
+        df.columns = df.columns.str.strip()
+
+        # Validate required columns exist
+        missing = REQUIRED_COLS - set(df.columns)
+        if missing:
+            raise ValueError(f"CSV is missing required columns: {missing}")
+
+        # Drop rows where any required column is NaN
+        df = df.dropna(subset=list(REQUIRED_COLS))
+
+        if df.empty:
+            raise ValueError("CSV loaded but contains no valid rows after dropping NaNs.")
+
+        df["volatility_label"] = df["Volatility"].apply(vol_label)
+        stocks = df_to_stocks(df)
+
+        if not stocks:
+            raise ValueError("No valid stock records could be parsed from the CSV.")
+
+        return df, stocks
+
+    except FileNotFoundError:
+        st.warning(
+            "⚠️ **stocks_data.csv not found.** "
+            "Using built-in demo data (15 PSX stocks). "
+            "Upload `stocks_data.csv` to your app root to use your own data.",
+            icon="📂"
+        )
+    except Exception as e:
+        st.warning(
+            f"⚠️ **Could not load stocks_data.csv** ({e}). "
+            "Using built-in demo data instead.",
+            icon="📂"
+        )
+
+    # ── Fallback to demo data ────────────────────────────────────────────
+    df = pd.DataFrame(FALLBACK_STOCKS_DATA)
+    df["volatility_label"] = df["Volatility"].apply(vol_label)
+    stocks = df_to_stocks(df)
     return df, stocks
 
 
-# Load once at startup
+# ─────────────────────────────────────────────
+#  LOAD ONCE AT STARTUP
+# ─────────────────────────────────────────────
 RAW_DF, STOCKS = load_stocks_csv()
+
+# Guard: should never be empty after fallback, but be safe
+if not STOCKS:
+    st.error("Fatal: stock universe is empty. Cannot continue.")
+    st.stop()
+
 ALL_SECTORS = sorted(list(set(s["sector"] for s in STOCKS)))
 
 # ─────────────────────────────────────────────
 #  LEGACY SCORING HELPERS
-#  (kept for offline fallback when NLP modules
-#   are not installed)
 # ─────────────────────────────────────────────
 WEIGHTS = {
     "growth":     0.30,
@@ -302,37 +377,24 @@ def score_components(s, risk_appetite, preferred_sectors):
 
 # ─────────────────────────────────────────────
 #  NEW PIPELINE SCORING
-#  Calls enrich_and_score() from scoring_engine
-#  which runs: NLP → heuristic score → CNF filter
 # ─────────────────────────────────────────────
-
 def run_new_pipeline(preferred_sectors, excluded_sectors, risk_appetite):
-    """
-    Full pipeline:
-      1. enrich_with_sentiment()  — scraper.py headlines → TextBlob → Sentiment_Score
-      2. score_stock()            — 5-component heuristic + sentiment adjustment
-      3. cnf_filter()             — CNF investment rules filter bad stocks
-      4. Sort by Total_Score
-
-    Returns enriched + filtered DataFrame from scoring_engine.py
-    """
     scored_df = enrich_and_score(
         RAW_DF.copy(),
         preferred_sectors=preferred_sectors,
         excluded_sectors=excluded_sectors,
         risk_appetite=risk_appetite,
-        run_nlp=True,    # enables article headline → sentiment
-        run_cnf=True,    # enables CNF logic pre-filter
+        run_nlp=True,
+        run_cnf=True,
         verbose=True,
     )
     return scored_df
 
 
 def pipeline_to_stocks_list(scored_df):
-    """Convert scored DataFrame rows back to the dict format used by the UI."""
     stocks_out = []
     for _, row in scored_df.iterrows():
-        vol_label = (
+        vol_lbl = (
             "Low" if row["Volatility"] <= 0.15
             else "Medium" if row["Volatility"] <= 0.25
             else "High"
@@ -343,24 +405,21 @@ def pipeline_to_stocks_list(scored_df):
             "sector":          row["Sector"],
             "price":           row["Price_PKR"],
             "growth":          row["Growth_5yr"],
-            "volatility":      vol_label,
+            "volatility":      vol_lbl,
             "div_yield":       row["Dividend_Yield"] / 100,
             "momentum":        row["Momentum_Score"],
             "score":           row["Total_Score"],
-            # NLP fields added by pipeline
             "sentiment_score": row.get("Sentiment_Score", 0.0),
             "sentiment_label": row.get("Sentiment_Label", "Neutral"),
             "headline":        row.get("Headline", "No recent news"),
-            # Score breakdown if present
             "breakdown":       row.get("Breakdown", {}),
         })
     return stocks_out
 
 
 # ─────────────────────────────────────────────
-#  PORTFOLIO CONSTRUCTION  (legacy + new)
+#  PORTFOLIO CONSTRUCTION
 # ─────────────────────────────────────────────
-
 def build_scored_list_legacy(risk, preferred, excluded, target):
     scored = []
     for s in STOCKS:
@@ -376,17 +435,18 @@ def build_scored_list_legacy(risk, preferred, excluded, target):
 
 def portfolio_from_top(scored, n):
     candidates = [s for s in scored if s["score"] > 0][:n]
+    if not candidates:
+        # If all scores are 0 (e.g. everything excluded), take top-n anyway
+        candidates = scored[:n]
     total_score = sum(s["score"] for s in candidates)
     for s in candidates:
-        s["alloc"] = round(s["score"] / total_score * 100) if total_score else round(100 / n)
+        s["alloc"] = round(s["score"] / total_score * 100) if total_score else round(100 / max(len(candidates), 1))
     return candidates
 
 
 # ─────────────────────────────────────────────
-#  OPTIMISERS  (local — used when pipeline
-#  module not available)
+#  OPTIMISERS  (local fallback)
 # ─────────────────────────────────────────────
-
 def portfolio_value(weights, stocks):
     vol_penalty = {"Low": 0, "Medium": 0.5, "High": 1.5}
     val = 0
@@ -474,15 +534,21 @@ with st.sidebar:
     target_return = st.slider("Target Annual Return %", 5, 50, 20)
     risk_appetite = st.radio("Risk Appetite", ["Low", "Medium", "High"], horizontal=True, index=1)
 
-    preferred = st.multiselect("Preferred Sectors", options=ALL_SECTORS, default=["Banking", "Energy"])
-    excluded  = st.multiselect("Excluded Sectors",
-                                options=[s for s in ALL_SECTORS if s not in preferred], default=[])
+    preferred = st.multiselect(
+        "Preferred Sectors",
+        options=ALL_SECTORS,
+        default=[s for s in ["Banking", "Energy"] if s in ALL_SECTORS]
+    )
+    excluded = st.multiselect(
+        "Excluded Sectors",
+        options=[s for s in ALL_SECTORS if s not in preferred],
+        default=[]
+    )
     portfolio_size = st.select_slider("Portfolio Size", options=[3, 5, 7, 10], value=5)
     algorithm      = st.radio("Algorithm", ["Hill Climbing", "Sim. Annealing", "Both"], horizontal=True)
 
     st.divider()
 
-    # Show whether NLP pipeline is active
     if PIPELINE_AVAILABLE:
         st.markdown("""<div style="background:#f0fdf4;border:1px solid #86efac;border-radius:8px;
                        padding:10px 12px;font-size:0.78rem;color:#15803d;font-weight:600;">
@@ -514,11 +580,6 @@ if "results" not in st.session_state or run:
     use_pipeline = PIPELINE_AVAILABLE
 
     if use_pipeline:
-        # ── NEW PIPELINE ──────────────────────────────────────────────────
-        # Step 1: NLP enrichment → sentiment scores from article headlines
-        # Step 2: Heuristic scoring with sentiment adjustment
-        # Step 3: CNF filter — removes stocks violating investment rules
-        # Step 4: Returns ranked DataFrame
         with st.spinner("Running NLP enrichment + CNF filter…"):
             try:
                 scored_df   = run_new_pipeline(preferred, excluded, risk_appetite)
@@ -529,13 +590,17 @@ if "results" not in st.session_state or run:
                 scored_list   = build_scored_list_legacy(risk_appetite, preferred, excluded, target_return)
                 pipeline_used = "Legacy (fallback)"
     else:
-        # ── LEGACY FALLBACK ───────────────────────────────────────────────
         scored_list   = build_scored_list_legacy(risk_appetite, preferred, excluded, target_return)
         pipeline_used = "Legacy"
 
     portfolio = portfolio_from_top(scored_list, portfolio_size)
 
-    # Optimisers — use scoring_engine versions if available, else local
+    # Guard against empty portfolio
+    if not portfolio:
+        st.error("No stocks passed the filters. Please broaden your sector/risk settings.")
+        st.stop()
+
+    # Optimisers
     if PIPELINE_AVAILABLE and pipeline_used != "Legacy (fallback)":
         try:
             top_df = scored_df.head(portfolio_size).reset_index(drop=True)
@@ -563,7 +628,6 @@ if "results" not in st.session_state or run:
     for i, s in enumerate(portfolio):
         s["alloc"] = round(float(opt_allocs[i]))
 
-    # Portfolio metrics
     exp_return = sum(s["alloc"] / 100 * s["growth"] for s in portfolio) * 100
     vol_num    = {"Low": 0.05, "Medium": 0.10, "High": 0.20}
     port_risk  = round(sum(s["alloc"] / 100 * vol_num[s["volatility"]] for s in portfolio), 2)
@@ -571,23 +635,23 @@ if "results" not in st.session_state or run:
     sharpe     = round((exp_return / 100 - 0.05) / (port_risk if port_risk else 0.01), 2)
 
     st.session_state.results = {
-        "scored_list":    scored_list,
-        "portfolio":      portfolio,
-        "exp_return":     round(exp_return, 1),
-        "port_risk":      port_risk,
-        "avg_div":        avg_div,
-        "sharpe":         sharpe,
-        "hc_score":       round(hc_score_val, 3),
-        "sa_score":       round(sa_score_val, 3),
-        "hc_hist":        hc_hist,
-        "sa_hist":        sa_hist,
-        "preferred":      preferred,
-        "excluded":       excluded,
-        "risk":           risk_appetite,
-        "duration":       duration,
-        "target":         target_return,
-        "invest_amount":  invest_amount,
-        "pipeline_used":  pipeline_used,
+        "scored_list":   scored_list,
+        "portfolio":     portfolio,
+        "exp_return":    round(exp_return, 1),
+        "port_risk":     port_risk,
+        "avg_div":       avg_div,
+        "sharpe":        sharpe,
+        "hc_score":      round(hc_score_val, 3),
+        "sa_score":      round(sa_score_val, 3),
+        "hc_hist":       hc_hist,
+        "sa_hist":       sa_hist,
+        "preferred":     preferred,
+        "excluded":      excluded,
+        "risk":          risk_appetite,
+        "duration":      duration,
+        "target":        target_return,
+        "invest_amount": invest_amount,
+        "pipeline_used": pipeline_used,
     }
 
 R = st.session_state.results
@@ -601,9 +665,8 @@ tab1, tab2, tab3, tab4 = st.tabs(["Portfolio", "AI Reasoning", "Optimization", "
 #  TAB 1 — PORTFOLIO
 # ══════════════════════════════════════════════
 with tab1:
-    # Pipeline indicator
-    pipeline_color = "#f0fdf4" if "NLP" in R["pipeline_used"] else "#fef9c3"
-    pipeline_border = "#86efac" if "NLP" in R["pipeline_used"] else "#fde047"
+    pipeline_color      = "#f0fdf4" if "NLP" in R["pipeline_used"] else "#fef9c3"
+    pipeline_border     = "#86efac" if "NLP" in R["pipeline_used"] else "#fde047"
     pipeline_text_color = "#15803d" if "NLP" in R["pipeline_used"] else "#92400e"
     st.markdown(f"""
     <div class="pipeline-info" style="background:{pipeline_color};border-color:{pipeline_border};">
@@ -613,7 +676,6 @@ with tab1:
       &nbsp;|&nbsp; Top {len(R['portfolio'])} selected after CNF filter
     </div>""", unsafe_allow_html=True)
 
-    # Metric row
     m1, m2, m3, m4 = st.columns(4)
     with m1:
         st.markdown(f"""
@@ -671,7 +733,6 @@ with tab1:
     with col_right:
         st.markdown('<div class="section-header">Portfolio Holdings</div>', unsafe_allow_html=True)
 
-        # Show sentiment column only when NLP pipeline ran
         show_sentiment = "NLP" in R["pipeline_used"]
         header_sent = "<th>Sentiment</th>" if show_sentiment else ""
 
@@ -707,7 +768,6 @@ with tab1:
           <tbody>{rows}</tbody>
         </table>""", unsafe_allow_html=True)
 
-    # Sector bar chart
     st.markdown('<div class="section-header">Allocation by Sector</div>', unsafe_allow_html=True)
     sector_alloc = {}
     for s in R['portfolio']:
@@ -734,13 +794,10 @@ with tab1:
 
 # ══════════════════════════════════════════════
 #  TAB 2 — AI REASONING
-#  Now shows: CNF rules, NLP sentiment,
-#  article headline per stock
 # ══════════════════════════════════════════════
 with tab2:
     show_nlp = "NLP" in R["pipeline_used"]
 
-    # ── CNF Rules panel ──────────────────────────────────────────────────
     st.markdown('<div class="section-header">CNF Investment Rules (AI Reasoning Layer)</div>',
                 unsafe_allow_html=True)
     st.markdown("""
@@ -781,7 +838,6 @@ with tab2:
     st.markdown('<div class="section-header" style="margin-top:24px;">Top Stock Reasoning Cards</div>',
                 unsafe_allow_html=True)
 
-    # ── Stock reason cards ────────────────────────────────────────────────
     top3 = R['portfolio'][:3]
     cols = st.columns(3)
     for col, s in zip(cols, top3):
@@ -790,13 +846,11 @@ with tab2:
         mom_label = 'Very High' if s['momentum'] > 0.88 else 'High' if s['momentum'] > 0.75 else 'Medium'
         mom_color = '#4ade80' if s['momentum'] > 0.75 else '#facc15'
 
-        # Sentiment fields (from NLP pipeline)
         sent_lbl   = s.get("sentiment_label", "Neutral")
         sent_score = s.get("sentiment_score", 0.0)
         headline   = s.get("headline", "No recent news available")
         sent_color = '#16a34a' if sent_lbl == 'Positive' else '#dc2626' if sent_lbl == 'Negative' else '#64748b'
 
-        # AI reasoning text — now includes NLP result
         if show_nlp:
             reasoning = (
                 f"{s['symbol']} selected after passing all 6 CNF investment rules. "
@@ -842,12 +896,10 @@ with tab2:
               <span class="alloc-badge">Recommended allocation: {s['alloc']}%</span>
             </div>""", unsafe_allow_html=True)
 
-    # ── Score breakdown bar ───────────────────────────────────────────────
     st.markdown('<div class="section-header" style="margin-top:24px;">Score Component Breakdown (Top Stock)</div>',
                 unsafe_allow_html=True)
     top_s = R['portfolio'][0]
 
-    # Use pipeline breakdown if available, else compute legacy
     breakdown = top_s.get("breakdown", {})
     if breakdown:
         comps_display = {
@@ -979,7 +1031,6 @@ with tab3:
 
 # ══════════════════════════════════════════════
 #  TAB 4 — ALL STOCKS
-#  Now shows Sentiment column from NLP pipeline
 # ══════════════════════════════════════════════
 with tab4:
     scored_list = R['scored_list']
