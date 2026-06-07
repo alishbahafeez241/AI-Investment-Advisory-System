@@ -520,16 +520,16 @@ with st.sidebar:
     st.divider()
 
     if PIPELINE_AVAILABLE:
-        st.markdown("""<div style="background:#f0fdf4;border:1px solid #86efac;border-radius:8px;
-                       padding:10px 12px;font-size:0.78rem;color:#15803d;font-weight:600;">
-                       ✅ NLP + CNF Pipeline Active<br>
-                       <span style="font-weight:400;color:#166534;">
+        st.markdown("""<div style="background:#eff6ff;border:1px solid #93c5fd;border-radius:8px;
+                       padding:10px 12px;font-size:0.78rem;color:#1d4ed8;font-weight:600;">
+                       NLP + CNF Pipeline Active<br>
+                       <span style="font-weight:400;color:#1e40af;">
                        Article sentiment + CNF rules enabled</span></div>""",
                     unsafe_allow_html=True)
     else:
-        st.markdown("""<div style="background:#fef9c3;border:1px solid #fde047;border-radius:8px;
-                       padding:10px 12px;font-size:0.78rem;color:#92400e;font-weight:600;">
-                       ⚠ Legacy Mode<br>
+        st.markdown("""<div style="background:#f1f5f9;border:1px solid #cbd5e1;border-radius:8px;
+                       padding:10px 12px;font-size:0.78rem;color:#475569;font-weight:600;">
+                       Legacy Mode<br>
                        <span style="font-weight:400;">
                        Install textblob & beautifulsoup4 to enable NLP</span></div>""",
                     unsafe_allow_html=True)
@@ -634,12 +634,9 @@ tab1, tab2, tab3, tab4 = st.tabs(["Portfolio", "AI Reasoning", "Optimization", "
 #  TAB 1 — PORTFOLIO
 # ══════════════════════════════════════════════
 with tab1:
-    pipeline_color      = "#f0fdf4" if "NLP" in R["pipeline_used"] else "#fef9c3"
-    pipeline_border     = "#86efac" if "NLP" in R["pipeline_used"] else "#fde047"
-    pipeline_text_color = "#15803d" if "NLP" in R["pipeline_used"] else "#92400e"
     st.markdown(f"""
-    <div class="pipeline-info" style="background:{pipeline_color};border-color:{pipeline_border};">
-      <strong style="color:{pipeline_text_color};">Pipeline: {R['pipeline_used']}</strong>
+    <div class="pipeline-info" style="background:#eff6ff;border-color:#93c5fd;">
+      <strong style="color:#1d4ed8;">Pipeline: {R['pipeline_used']}</strong>
       &nbsp;|&nbsp; Stocks loaded from <code>stocks_data.csv</code>
       &nbsp;|&nbsp; {len(R['scored_list'])} stocks scored
       &nbsp;|&nbsp; Top {len(R['portfolio'])} selected after CNF filter
