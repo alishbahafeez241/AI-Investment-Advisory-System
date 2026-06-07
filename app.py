@@ -1,4 +1,5 @@
 import streamlit as st
+import streamlit.components.v1 as components
 import pandas as pd
 import numpy as np
 import random
@@ -161,12 +162,6 @@ section[data-testid="stSidebar"] .stMarkdown h3 {
     margin: 1rem 0 0.6rem 0; padding-bottom: 6px; border-bottom: 2px solid #2563eb;
 }
 
-.prog-row { display: flex; align-items: center; margin-bottom: 10px; font-size: 0.85rem; }
-.prog-label { width: 160px; color: #475569; }
-.prog-bar-outer { flex: 1; background: #e2e8f0; border-radius: 6px; height: 8px; overflow: hidden; }
-.prog-bar-inner { height: 100%; border-radius: 6px; background: linear-gradient(90deg, #1d4ed8, #60a5fa); }
-.prog-val { width: 36px; text-align: right; color: #1d4ed8; font-family: 'DM Mono', monospace; margin-left: 8px; font-weight:600; }
-
 div[data-testid="stButton"] > button {
     background: #1d4ed8; color: #ffffff !important; border: none;
     border-radius: 10px; font-weight: 700; font-size: 0.95rem;
@@ -199,7 +194,6 @@ label { color: #0f172a !important; font-size: 0.88rem !important; font-weight: 6
 
 # ─────────────────────────────────────────────
 #  FALLBACK STOCK DATA
-#  Used when stocks_data.csv is missing
 # ─────────────────────────────────────────────
 FALLBACK_STOCKS_DATA = [
     {"Symbol": "HBL",   "Name": "Habib Bank Ltd",          "Sector": "Banking",    "Price_PKR": 145.0, "Growth_5yr": 0.22, "Volatility": 0.18, "Dividend_Yield": 8.5,  "Momentum_Score": 0.82},
@@ -225,15 +219,6 @@ FALLBACK_STOCKS_DATA = [
 # ─────────────────────────────────────────────
 @st.cache_data
 def load_stocks_csv():
-    """
-    Load stocks_data.csv and normalize column names.
-    Falls back to built-in demo data if the file is missing or malformed.
-
-    Expected CSV columns:
-        Symbol, Name, Sector, Price_PKR, Growth_5yr,
-        Volatility, Dividend_Yield, Momentum_Score, Market_Cap_B (optional)
-    """
-
     REQUIRED_COLS = {"Symbol", "Name", "Sector", "Price_PKR",
                      "Growth_5yr", "Volatility", "Dividend_Yield", "Momentum_Score"}
 
@@ -262,34 +247,22 @@ def load_stocks_csv():
                     "_market_cap":     float(row["Market_Cap_B"]) if "Market_Cap_B" in row and pd.notna(row.get("Market_Cap_B")) else 0.0,
                 })
             except (ValueError, KeyError):
-                # Skip malformed rows silently
                 continue
         return stocks
 
-    # ── Try loading the CSV ──────────────────────────────────────────────
     try:
         df = pd.read_csv("stocks_data.csv")
-
-        # Strip whitespace from column names (common CSV formatting issue)
         df.columns = df.columns.str.strip()
-
-        # Validate required columns exist
         missing = REQUIRED_COLS - set(df.columns)
         if missing:
             raise ValueError(f"CSV is missing required columns: {missing}")
-
-        # Drop rows where any required column is NaN
         df = df.dropna(subset=list(REQUIRED_COLS))
-
         if df.empty:
             raise ValueError("CSV loaded but contains no valid rows after dropping NaNs.")
-
         df["volatility_label"] = df["Volatility"].apply(vol_label)
         stocks = df_to_stocks(df)
-
         if not stocks:
             raise ValueError("No valid stock records could be parsed from the CSV.")
-
         return df, stocks
 
     except FileNotFoundError:
@@ -306,7 +279,6 @@ def load_stocks_csv():
             icon="📂"
         )
 
-    # ── Fallback to demo data ────────────────────────────────────────────
     df = pd.DataFrame(FALLBACK_STOCKS_DATA)
     df["volatility_label"] = df["Volatility"].apply(vol_label)
     stocks = df_to_stocks(df)
@@ -318,7 +290,6 @@ def load_stocks_csv():
 # ─────────────────────────────────────────────
 RAW_DF, STOCKS = load_stocks_csv()
 
-# Guard: should never be empty after fallback, but be safe
 if not STOCKS:
     st.error("Fatal: stock universe is empty. Cannot continue.")
     st.stop()
@@ -436,7 +407,6 @@ def build_scored_list_legacy(risk, preferred, excluded, target):
 def portfolio_from_top(scored, n):
     candidates = [s for s in scored if s["score"] > 0][:n]
     if not candidates:
-        # If all scores are 0 (e.g. everything excluded), take top-n anyway
         candidates = scored[:n]
     total_score = sum(s["score"] for s in candidates)
     for s in candidates:
@@ -595,7 +565,6 @@ if "results" not in st.session_state or run:
 
     portfolio = portfolio_from_top(scored_list, portfolio_size)
 
-    # Guard against empty portfolio
     if not portfolio:
         st.error("No stocks passed the filters. Please broaden your sector/risk settings.")
         st.stop()
@@ -896,11 +865,13 @@ with tab2:
               <span class="alloc-badge">Recommended allocation: {s['alloc']}%</span>
             </div>""", unsafe_allow_html=True)
 
+    # ── Score Component Breakdown — uses components.html to avoid raw HTML bug ──
     st.markdown('<div class="section-header" style="margin-top:24px;">Score Component Breakdown (Top Stock)</div>',
                 unsafe_allow_html=True)
-    top_s = R['portfolio'][0]
 
+    top_s = R['portfolio'][0]
     breakdown = top_s.get("breakdown", {})
+
     if breakdown:
         comps_display = {
             "Growth (30pts)":       round(breakdown.get("Growth", 0), 1),
@@ -913,21 +884,59 @@ with tab2:
     else:
         comps_display = score_components(top_s, R['risk'], R['preferred'])
 
-    prog_html = ""
+    # Build progress bar rows as pure inline-styled HTML (no CSS classes needed)
+    prog_rows_html = ""
     for k, v in comps_display.items():
         pct = min(abs(v) * 3, 100)
-        bar_color = "linear-gradient(90deg,#dc2626,#f87171)" if v < 0 else "linear-gradient(90deg,#1d4ed8,#60a5fa)"
-        prog_html += f"""
-        <div class="prog-row">
-          <div class="prog-label">{k}</div>
-          <div class="prog-bar-outer"><div class="prog-bar-inner" style="width:{pct}%;background:{bar_color};"></div></div>
-          <div class="prog-val" style="color:{'#dc2626' if v < 0 else '#1d4ed8'}">{v}</div>
+        bar_color = (
+            "linear-gradient(90deg,#dc2626,#f87171)"
+            if v < 0
+            else "linear-gradient(90deg,#1d4ed8,#60a5fa)"
+        )
+        val_color = "#dc2626" if v < 0 else "#1d4ed8"
+        prog_rows_html += f"""
+        <div style="display:flex;align-items:center;margin-bottom:12px;
+                    font-size:14px;font-family:'DM Sans',sans-serif;">
+          <div style="width:165px;color:#475569;flex-shrink:0;">{k}</div>
+          <div style="flex:1;background:#e2e8f0;border-radius:6px;height:8px;overflow:hidden;">
+            <div style="width:{pct}%;height:100%;border-radius:6px;
+                        background:{bar_color};transition:width 0.4s ease;"></div>
+          </div>
+          <div style="width:40px;text-align:right;margin-left:10px;
+                      color:{val_color};font-family:'DM Mono',monospace;
+                      font-weight:600;font-size:13px;">{v}</div>
         </div>"""
 
-    st.markdown(f"""
-    <div style="background:#f8fafc;border-radius:12px;padding:18px;border:1px solid #e2e8f0;">
-      {prog_html}
-    </div>""", unsafe_allow_html=True)
+    # Render inside an iframe via components.html — guarantees correct HTML rendering
+    breakdown_html = f"""
+    <!DOCTYPE html>
+    <html>
+    <head>
+      <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;600&family=DM+Mono:wght@400;500&display=swap"
+            rel="stylesheet">
+      <style>
+        body {{
+          margin: 0; padding: 0;
+          background: transparent;
+          font-family: 'DM Sans', sans-serif;
+        }}
+        .wrap {{
+          background: #f8fafc;
+          border: 1px solid #e2e8f0;
+          border-radius: 12px;
+          padding: 18px 20px;
+        }}
+      </style>
+    </head>
+    <body>
+      <div class="wrap">
+        {prog_rows_html}
+      </div>
+    </body>
+    </html>
+    """
+
+    components.html(breakdown_html, height=60 + len(comps_display) * 46, scrolling=False)
 
     st.markdown("<div style='text-align:center;color:#475569;font-size:0.72rem;margin-top:16px;'>"
                 "AI Reasoning Tab • NLP Sentiment (TextBlob) + CNF Rules filter + 5-component heuristic scoring"
@@ -1052,13 +1061,13 @@ with tab4:
 
     for i, s in enumerate(top_n):
         if s['symbol'] == top_n[0]['symbol']:
-            status = '<span class="status-top">Top Pick</span>'
+            status = '<span style="background:#dbeafe;color:#1d4ed8;border-radius:12px;padding:2px 10px;font-size:0.75rem;font-weight:700;">Top Pick</span>'
         elif s['symbol'] in port_syms:
-            status = '<span class="status-sel">Selected</span>'
+            status = '<span style="background:#dcfce7;color:#15803d;border-radius:12px;padding:2px 10px;font-size:0.75rem;font-weight:700;">Selected</span>'
         elif s['score'] >= 60:
-            status = '<span class="status-con">Consider</span>'
+            status = '<span style="background:#fef3c7;color:#b45309;border-radius:12px;padding:2px 10px;font-size:0.75rem;font-weight:700;">Consider</span>'
         else:
-            status = '<span class="status-neu">Neutral</span>'
+            status = '<span style="background:#f1f5f9;color:#64748b;border-radius:12px;padding:2px 10px;font-size:0.75rem;font-weight:700;">Neutral</span>'
 
         sc = s['score']
         badge_cls = 'score-high' if sc >= 75 else 'score-mid' if sc >= 60 else 'score-low'
