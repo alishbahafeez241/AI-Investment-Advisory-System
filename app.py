@@ -769,37 +769,100 @@ with tab2:
                 unsafe_allow_html=True)
     st.markdown("""
     <div style="font-size:0.82rem;color:#475569;margin-bottom:12px;">
-      These 6 rules (from cnf_filter.py) are expressed in
-      <strong>Conjunctive Normal Form</strong> — each is a disjunction (OR) of literals.
-      A stock passes only if ALL clauses evaluate to True.
+      Each stock is evaluated against <strong>6 CNF rules</strong> (Conjunctive Normal Form).
+      A stock is <strong style="color:#16a34a;">Investable</strong> only if it passes ALL 6 rules,
+      otherwise it is <strong style="color:#dc2626;">Excluded</strong>.
     </div>""", unsafe_allow_html=True)
 
-    cnf_rules = [
-        ("Rule 1", "NOT(Sentiment=Negative AND Risk=High)",
-         "NOT sentiment_negative OR NOT risk_high",
-         "Blocks stocks that are simultaneously negative sentiment and high volatility"),
-        ("Rule 2", "Negative sentiment → NOT Investable",
-         "NOT sentiment_negative",
-         "Directly excludes any stock with negative news sentiment score"),
-        ("Rule 3", "High Risk requires Strong Growth",
-         "NOT risk_high OR growth_strong",
-         "High-volatility stocks must have ≥20% 5yr growth to compensate"),
-        ("Rule 4", "Excluded Sector → NOT Investable",
-         "NOT sector_excluded",
-         "Strictly honours the user's excluded sector preferences"),
-        ("Rule 5", "Low Risk must offer Return Potential",
-         "NOT risk_low OR growth_strong OR dividend_high",
-         "Low-volatility stocks still need good growth or dividend ≥8%"),
-        ("Rule 6", "Weak Momentum + Negative Sentiment blocked",
-         "momentum_strong OR NOT sentiment_negative",
-         "Stocks with poor momentum AND bad news are excluded"),
-    ]
-    for label, title, logic, desc in cnf_rules:
+    # Define CNF rules as (label, short_name, logic_fn)
+    # logic_fn takes a stock dict and returns (passed: bool, reason: str)
+    def eval_cnf_rules(s, excluded_sectors):
+        sentiment_negative = s.get("sentiment_label", "Neutral") == "Negative"
+        risk_high   = s["volatility"] == "High"
+        risk_low    = s["volatility"] == "Low"
+        growth_strong = s["growth"] >= 0.20
+        dividend_high = s["div_yield"] >= 0.08
+        momentum_strong = s["momentum"] >= 0.75
+        sector_excluded = s["sector"] in excluded_sectors
+
+        rules = [
+            ("Rule 1", "NOT(Sentiment=Negative AND Risk=High)",
+             not (sentiment_negative and risk_high),
+             f"sentiment_negative={sentiment_negative}, risk_high={risk_high}"),
+            ("Rule 2", "Negative sentiment → NOT Investable",
+             not sentiment_negative,
+             f"sentiment_negative={sentiment_negative}"),
+            ("Rule 3", "High Risk requires Strong Growth",
+             not risk_high or growth_strong,
+             f"risk_high={risk_high}, growth_strong={growth_strong}"),
+            ("Rule 4", "Excluded Sector → NOT Investable",
+             not sector_excluded,
+             f"sector_excluded={sector_excluded}"),
+            ("Rule 5", "Low Risk must offer Return Potential",
+             not risk_low or growth_strong or dividend_high,
+             f"risk_low={risk_low}, growth_strong={growth_strong}, dividend_high={dividend_high}"),
+            ("Rule 6", "Weak Momentum + Negative Sentiment blocked",
+             momentum_strong or not sentiment_negative,
+             f"momentum_strong={momentum_strong}, sentiment_negative={sentiment_negative}"),
+        ]
+        return rules
+
+    # Evaluate all scored stocks and show pass/fail
+    all_scored = R['scored_list']
+    port_syms  = {s['symbol'] for s in R['portfolio']}
+    excl       = R.get('excluded', [])
+
+    # Show top 8 stocks (portfolio + a few excluded)
+    display_stocks = all_scored[:8]
+
+    for s in display_stocks:
+        rules_result = eval_cnf_rules(s, excl)
+        passed_all   = all(r[2] for r in rules_result)
+        failed_rules = [r for r in rules_result if not r[2]]
+
+        # Header row
+        if passed_all:
+            verdict_html = (
+                f'<span style="color:#16a34a;font-weight:700;font-size:1rem;">✅ {s["symbol"]}</span>'
+                f'<span style="color:#0f172a;font-weight:600;"> — Passed all 6 CNF rules</span>'
+                f'<span style="background:#dcfce7;color:#15803d;border-radius:20px;'
+                f'padding:2px 12px;font-size:0.75rem;font-weight:700;margin-left:10px;">Investable</span>'
+            )
+        else:
+            fail_names = ", ".join(r[0] for r in failed_rules)
+            fail_detail = failed_rules[0][3] if failed_rules else ""
+            verdict_html = (
+                f'<span style="color:#dc2626;font-weight:700;font-size:1rem;">❌ {s["symbol"]}</span>'
+                f'<span style="color:#0f172a;font-weight:600;"> — Failed {fail_names}</span>'
+                f'<span style="font-size:0.75rem;color:#64748b;margin-left:8px;">({fail_detail})</span>'
+                f'<span style="background:#fee2e2;color:#dc2626;border-radius:20px;'
+                f'padding:2px 12px;font-size:0.75rem;font-weight:700;margin-left:10px;">Excluded</span>'
+            )
+
+        # Rule pills row
+        pills_html = ""
+        for rname, rtitle, rpassed, _ in rules_result:
+            if rpassed:
+                pills_html += (
+                    f'<span style="background:#dbeafe;color:#1d4ed8;border-radius:6px;'
+                    f'padding:3px 9px;font-size:0.71rem;font-weight:700;margin:2px;display:inline-block;">'
+                    f'{rname}: PASS</span>'
+                )
+            else:
+                pills_html += (
+                    f'<span style="background:#fee2e2;color:#dc2626;border-radius:6px;'
+                    f'padding:3px 9px;font-size:0.71rem;font-weight:700;margin:2px;display:inline-block;">'
+                    f'{rname}: FAIL</span>'
+                )
+
+        border_color = "#16a34a" if passed_all else "#dc2626"
+        bg_color     = "#f0fdf4" if passed_all else "#fff5f5"
+
         st.markdown(f"""
-        <div class="cnf-rule">
-          <span class="rule-label">{label}:</span> {title}<br>
-          <span class="rule-logic">CNF clause: ( {logic} )</span>
-          <div style="font-size:0.78rem;color:#64748b;margin-top:4px;">{desc}</div>
+        <div style="background:{bg_color};border:1px solid {border_color};border-left:4px solid {border_color};
+                    border-radius:8px;padding:12px 16px;margin-bottom:10px;">
+          <div style="margin-bottom:8px;">{verdict_html}</div>
+          <div>{pills_html}</div>
         </div>""", unsafe_allow_html=True)
 
     st.markdown('<div class="section-header" style="margin-top:24px;">Top Stock Reasoning Cards</div>',
