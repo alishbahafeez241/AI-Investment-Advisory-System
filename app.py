@@ -534,6 +534,7 @@ with st.sidebar:
                        Install textblob & beautifulsoup4 to enable NLP</span></div>""",
                     unsafe_allow_html=True)
 
+    st.markdown("<div style='margin-top:14px;'></div>", unsafe_allow_html=True)
     run = st.button("Run Analysis", use_container_width=True)
 
 # ─────────────────────────────────────────────
